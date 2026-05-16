@@ -171,3 +171,29 @@ La versión actual consulta la tabla `directorio` por bloques de 1000 registros 
 ## Ajuste de Informe Documental - Anexos horizontales
 
 La exportación del Informe Documental fue ajustada para que la sección **ANEXOS** use una tabla optimizada en orientación horizontal, con columnas fijas, tipografía Arial reducida, encabezados en verde institucional `#006068` y bordes visibles. En PDF la exportación usa orientación horizontal para evitar superposición de datos en tablas extensas.
+
+## Mejora w - Edición, transferencia y seguimiento de tickets
+
+Esta versión agrega al módulo **Registros**:
+
+- edición completa del ticket;
+- cambio de estado de `Requiere Seguimiento` a `Resuelto`;
+- cálculo automático de tiempo de resolución;
+- asignación de agente responsable;
+- transferencia de tickets entre agentes;
+- historial/auditoría de seguimiento por ticket;
+- visualización del agente asignado y tiempo en la tabla de Registros.
+
+### Migración requerida
+
+Para esta mejora sí se requiere una migración aditiva. No elimina datos existentes.
+
+Ejecuta en Supabase > SQL Editor el archivo:
+
+```text
+SQL_MIGRACION_TICKETS_SEGUIMIENTO.sql
+```
+
+También puedes ejecutar `schema.sql` completo, ya que incluye la misma migración de forma segura.
+
+La migración agrega columnas a `tickets` y crea la tabla `ticket_seguimientos`. Los tickets existentes se conservan y se inicializan con su agente original como agente asignado cuando no tengan asignación.

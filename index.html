@@ -121,7 +121,7 @@
 
         <section id="tab-registros" class="tab-content max-w-7xl mx-auto">
           <div class="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4"><div class="flex items-center gap-3"><div class="w-10 h-10 bg-instVerdeOscuro rounded-lg flex items-center justify-center text-white shadow"><i class="fa-solid fa-list"></i></div><h2 class="text-2xl font-bold text-instVerdeOscuro">Registro de Tickets</h2></div><div class="flex flex-wrap gap-2"><input type="text" id="filter-tickets" onkeyup="renderTickets()" placeholder="Filtrar tickets..." class="field py-2 w-56"><label class="btn btn-primary px-4 py-2 cursor-pointer"><i class="fa-solid fa-file-import"></i> Importar CSV<input type="file" id="tickets-csv-file" accept=".csv" class="hidden" onchange="handleTicketsCSVUpload(event)"></label></div></div>
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-left text-sm whitespace-nowrap"><thead class="bg-gray-50 border-b text-instPlomo"><tr><th class="px-6 py-4">ID / Fecha</th><th class="px-6 py-4">Usuario</th><th class="px-6 py-4">Asunto</th><th class="px-6 py-4">Estado</th><th class="px-6 py-4 text-center">Valoración</th><th class="px-6 py-4 text-center">Acciones</th></tr></thead><tbody id="tickets-table-body" class="divide-y divide-gray-100"></tbody></table></div><div id="empty-tickets" class="p-8 text-center text-instPlomo hidden"><i class="fa-solid fa-inbox text-4xl mb-3 text-gray-300"></i><p>No hay tickets registrados aún.</p></div></div>
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-left text-sm whitespace-nowrap"><thead class="bg-gray-50 border-b text-instPlomo"><tr><th class="px-6 py-4">ID / Fecha</th><th class="px-6 py-4">Usuario</th><th class="px-6 py-4">Asunto</th><th class="px-6 py-4">Estado</th><th class="px-6 py-4">Agente Asignado</th><th class="px-6 py-4">Tiempo</th><th class="px-6 py-4 text-center">Valoración</th><th class="px-6 py-4 text-center">Acciones</th></tr></thead><tbody id="tickets-table-body" class="divide-y divide-gray-100"></tbody></table></div><div id="empty-tickets" class="p-8 text-center text-instPlomo hidden"><i class="fa-solid fa-inbox text-4xl mb-3 text-gray-300"></i><p>No hay tickets registrados aún.</p></div></div>
         </section>
 
         <section id="tab-dashboard" class="tab-content max-w-7xl mx-auto">
@@ -212,6 +212,56 @@
   </div>
 
   <div id="modal-link-valoracion" class="modal fixed inset-0 bg-black/50 z-[100] items-center justify-center"><div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md mx-4 text-center"><div class="w-16 h-16 bg-yellow-100 text-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl"><i class="fa-solid fa-star"></i></div><h2 class="text-xl font-bold text-instVerdeOscuro mb-2">Valoración del Cliente</h2><p class="text-sm text-instPlomo mb-4">Enlace público seguro con token para que el usuario califique.</p><div class="flex items-center gap-2 bg-gray-100 p-2 rounded-lg border mb-4"><input type="text" id="url-valoracion" readonly class="bg-transparent w-full outline-none text-sm truncate"><button onclick="copiarUrlValoracion()" class="btn btn-green px-3 py-2"><i class="fa-regular fa-copy"></i></button></div><div class="flex gap-2"><button onclick="cerrarModalLink()" class="btn btn-muted px-4 py-2 w-1/2">Cerrar</button><button id="btn-test-valoracion" class="btn bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 w-1/2"><i class="fa-solid fa-laptop-code"></i> Simular</button></div></div></div>
+
+  <div id="modal-editar-ticket" class="modal fixed inset-0 bg-black/50 z-[120] items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto">
+      <div class="p-6 border-b flex items-center justify-between gap-3">
+        <div><h2 class="text-xl font-bold text-instVerdeOscuro">Editar Ticket <span id="edit-ticket-title" class="text-instPlomo"></span></h2><p class="text-xs text-gray-500">Modifica datos, cambia estado o actualiza asignación. Todo cambio queda registrado en seguimiento.</p></div>
+        <button onclick="cerrarModalEditarTicket()" class="text-gray-400 hover:text-red-500 text-2xl"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="form-editar-ticket" class="p-6 space-y-5">
+        <input type="hidden" id="edit-ticket-id">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div><label class="block text-sm font-semibold mb-1">Asunto *</label><input id="edit-asunto" class="field" required></div>
+          <div><label class="block text-sm font-semibold mb-1">Estado *</label><select id="edit-estado" class="field"><option>Requiere Seguimiento</option><option>Resuelto</option></select></div>
+          <div><label class="block text-sm font-semibold mb-1">Categoría</label><select id="edit-categoria" class="field"></select></div>
+          <div><label class="block text-sm font-semibold mb-1">Subcategoría</label><input id="edit-subcategoria" class="field"></div>
+          <div><label class="block text-sm font-semibold mb-1">Prioridad</label><select id="edit-prioridad" class="field"><option>Baja</option><option>Media</option><option>Alta</option><option>Crítica</option></select></div>
+          <div><label class="block text-sm font-semibold mb-1">Canal</label><select id="edit-canal" class="field"></select></div>
+          <div><label class="block text-sm font-semibold mb-1">Agente asignado</label><select id="edit-assigned-agent" class="field"></select></div>
+          <div><label class="block text-sm font-semibold mb-1">Tiempo de resolución</label><input id="edit-tiempo" class="field bg-gray-50" readonly></div>
+        </div>
+        <div><label class="block text-sm font-semibold mb-1">Descripción / Notas</label><textarea id="edit-descripcion" rows="3" class="field resize-none"></textarea></div>
+        <div><label class="block text-sm font-semibold mb-1">Comentario de seguimiento</label><textarea id="edit-comentario" rows="2" class="field resize-none" placeholder="Describe el motivo del cambio, solución aplicada o información adicional..."></textarea></div>
+        <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t">
+          <button type="button" onclick="cerrarModalEditarTicket()" class="btn btn-muted px-4 py-2">Cancelar</button>
+          <button type="button" onclick="abrirModalTransferirDesdeEdicion()" class="btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2"><i class="fa-solid fa-right-left"></i> Transferir</button>
+          <button type="submit" class="btn btn-primary px-5 py-2"><i class="fa-solid fa-floppy-disk"></i> Guardar cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-transferir-ticket" class="modal fixed inset-0 bg-black/50 z-[130] items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl">
+      <div class="p-6 border-b flex items-center justify-between"><h2 class="text-xl font-bold text-instVerdeOscuro">Transferir Ticket</h2><button onclick="cerrarModalTransferirTicket()" class="text-gray-400 hover:text-red-500 text-2xl"><i class="fa-solid fa-xmark"></i></button></div>
+      <form id="form-transferir-ticket" class="p-6 space-y-4">
+        <input type="hidden" id="transfer-ticket-id">
+        <div class="bg-gray-50 border rounded-xl p-4 text-sm"><p><b>Ticket:</b> <span id="transfer-ticket-label"></span></p><p><b>Agente actual:</b> <span id="transfer-current-agent"></span></p></div>
+        <div><label class="block text-sm font-semibold mb-1">Nuevo agente *</label><select id="transfer-agent" class="field" required></select></div>
+        <div><label class="block text-sm font-semibold mb-1">Motivo de transferencia *</label><select id="transfer-motivo" class="field" required><option value="">Seleccione motivo</option><option>Requiere competencia técnica específica</option><option>Escalamiento funcional</option><option>Disponibilidad del agente</option><option>Seguimiento especializado</option><option>Otro</option></select></div>
+        <div><label class="block text-sm font-semibold mb-1">Comentario</label><textarea id="transfer-comentario" rows="3" class="field resize-none" placeholder="Detalle el contexto para el nuevo agente..."></textarea></div>
+        <div class="flex justify-end gap-3 pt-4 border-t"><button type="button" onclick="cerrarModalTransferirTicket()" class="btn btn-muted px-4 py-2">Cancelar</button><button type="submit" class="btn btn-green px-5 py-2"><i class="fa-solid fa-right-left"></i> Transferir</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-historial-ticket" class="modal fixed inset-0 bg-black/50 z-[130] items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto">
+      <div class="p-6 border-b flex items-center justify-between"><div><h2 class="text-xl font-bold text-instVerdeOscuro">Historial / Seguimiento</h2><p id="historial-ticket-label" class="text-xs text-gray-500"></p></div><button onclick="cerrarModalHistorialTicket()" class="text-gray-400 hover:text-red-500 text-2xl"><i class="fa-solid fa-xmark"></i></button></div>
+      <div id="historial-ticket-body" class="p-6 space-y-4"></div>
+    </div>
+  </div>
 
   <script>
     const SUPABASE_URL = 'https://nuzhzroufdpbmdomwfaf.supabase.co';
@@ -397,12 +447,113 @@
     document.addEventListener('click',e=>{ if(!e.target.closest('#search-results')&&!e.target.closest('#search-user')) $('search-results').classList.add('hidden') });
     function seleccionarUsuario(u){ if(!u)return; $('u-id').value=u.id; $('u-nombre').value=u.nombres||''; $('u-cedula').value=u.cedula||''; $('u-tipo').value=u.tipo||''; $('u-periodo').value=u.periodo||''; $('u-correo').value=u.correo||''; $('search-user').value=''; $('search-results').classList.add('hidden'); }
 
-    async function guardarTicket(estado){ const form=$('ticket-form'); if(!form.checkValidity()||!$('u-cedula').value){showToast('Completa campos y selecciona usuario','error');return} const ticket={id_str:'TKT-'+Math.floor(Math.random()*100000).toString().padStart(5,'0'),fecha_texto:new Date().toLocaleString(),agente_id:currentProfile?.id||null,agente_nombre:currentProfile?.nombre_completo||currentUser.email,usuario_id:$('u-id').value||null,usuario_cedula:$('u-cedula').value,usuario_nombre:$('u-nombre').value,asunto:$('t-asunto').value,categoria:$('t-categoria').value,subcategoria:$('t-subcategoria').value,prioridad:$('t-prioridad').value,canal:$('t-canal').value,descripcion:$('t-descripcion').value,estado,rating_token:estado==='Resuelto'?randomToken():null}; const {error}=await sbClient.from('tickets').insert(ticket); if(error)return showToast(error.message,'error'); form.reset(); ['u-id','u-nombre','u-cedula','u-tipo','u-periodo','u-correo'].forEach(id=>$(id).value=''); showToast('Ticket guardado'); await loadTickets(); renderTickets(); }
+    async function guardarTicket(estado){
+      const form=$('ticket-form');
+      if(!form.checkValidity()||!$('u-cedula').value){showToast('Completa campos y selecciona usuario','error');return}
+      const now=new Date();
+      const resolved=estado==='Resuelto';
+      const ticket={id_str:'TKT-'+Math.floor(Math.random()*100000).toString().padStart(5,'0'),fecha_texto:now.toLocaleString(),agente_id:currentProfile?.id||null,agente_nombre:currentProfile?.nombre_completo||currentUser.email,assigned_agent_id:currentProfile?.id||null,assigned_agent_name:currentProfile?.nombre_completo||currentUser.email,assigned_at:now.toISOString(),last_status_change_at:now.toISOString(),resolved_at:resolved?now.toISOString():null,resolution_minutes:resolved?0:null,usuario_id:$('u-id').value||null,usuario_cedula:$('u-cedula').value,usuario_nombre:$('u-nombre').value,asunto:$('t-asunto').value,categoria:$('t-categoria').value,subcategoria:$('t-subcategoria').value,prioridad:$('t-prioridad').value,canal:$('t-canal').value,descripcion:$('t-descripcion').value,estado,rating_token:resolved?randomToken():null};
+      const {data,error}=await sbClient.from('tickets').insert(ticket).select().single();
+      if(error)return showToast(error.message,'error');
+      await registrarSeguimiento(data.id,{accion:'Creación',estado_nuevo:estado,comentario:resolved?'Ticket resuelto en primera atención.':'Ticket creado con seguimiento pendiente.',agente_destino_id:ticket.assigned_agent_id,agente_destino_nombre:ticket.assigned_agent_name},false);
+      form.reset(); ['u-id','u-nombre','u-cedula','u-tipo','u-periodo','u-correo'].forEach(id=>$(id).value=''); showToast('Ticket guardado'); await loadTickets(); renderTickets();
+    }
     window.guardarTicket=guardarTicket;
 
-    function renderTickets(){ const tbody=$('tickets-table-body'); const ft=($('filter-tickets')?.value||'').toLowerCase(); const filtered=ticketsData.filter(t=>!ft||[t.id_str,t.usuario_nombre,t.asunto,t.categoria,t.estado,t.agente_nombre].some(v=>String(v||'').toLowerCase().includes(ft))); $('empty-tickets').classList.toggle('hidden',filtered.length!==0); tbody.innerHTML=filtered.map(t=>{const badge=t.estado==='Resuelto'?'bg-green-100 text-green-700 border-green-200':'bg-orange-100 text-orange-700 border-orange-200'; const rating=t.valoracion_calificacion?`<div>${[1,2,3,4,5].map(i=>`<i class="fa-solid fa-star ${i<=t.valoracion_calificacion?'text-yellow-400':'text-gray-200'}"></i>`).join('')}</div>`:'<span class="text-xs text-gray-400 italic">Pendiente</span>'; return `<tr class="hover:bg-gray-50"><td class="px-6 py-4"><div class="font-bold text-instVerdeOscuro">${esc(t.id_str)}</div><div class="text-xs text-gray-500">${esc((t.created_at||'').slice(0,10))}</div></td><td class="px-6 py-4"><div class="font-medium">${esc(t.usuario_nombre)}</div><div class="text-xs text-gray-500"><i class="fa-solid fa-headset mr-1"></i>${esc(t.agente_nombre)}</div></td><td class="px-6 py-4 truncate max-w-xs" title="${esc(t.asunto)}"><div class="font-medium">${esc(t.asunto)}</div><div class="text-xs text-instPlomo">${esc(t.categoria)}</div></td><td class="px-6 py-4"><span class="px-3 py-1 rounded-full text-xs font-semibold border ${badge}">${esc(t.estado)}</span></td><td class="px-6 py-4 text-center">${rating}</td><td class="px-6 py-4 text-center">${t.estado==='Resuelto'?`<button onclick="abrirModalLink('${t.id}')" class="text-yellow-500 hover:bg-yellow-50 p-2 rounded mr-1" title="Solicitar valoración"><i class="fa-solid fa-star"></i></button>`:''}<button onclick="eliminarTicket('${t.id}')" class="text-instTomate hover:bg-red-50 p-2 rounded" title="Eliminar"><i class="fa-solid fa-trash"></i></button></td></tr>`}).join(''); }
+    function agentName(t){ return t.assigned_agent_name || t.agente_nombre || 'Sin asignar'; }
+    function agentId(t){ return t.assigned_agent_id || t.agente_id || null; }
+    function minutesBetween(a,b){ if(!a||!b)return null; const diff=Math.round((new Date(b)-new Date(a))/60000); return Number.isFinite(diff)&&diff>=0?diff:null; }
+    function formatMinutes(min){ if(min===null||min===undefined||min==='') return '-'; min=Number(min); if(!Number.isFinite(min)) return '-'; const d=Math.floor(min/1440), h=Math.floor((min%1440)/60), m=min%60; return [d?d+'d':'',h?h+'h':'',m||(!d&&!h)?m+'m':''].filter(Boolean).join(' '); }
+    function ticketResolutionMinutes(t){ return t.resolution_minutes ?? (t.resolved_at ? minutesBetween(t.created_at,t.resolved_at) : null); }
+    function statusBadge(t){ return t.estado==='Resuelto'?'bg-green-100 text-green-700 border-green-200':'bg-orange-100 text-orange-700 border-orange-200'; }
+    function activeAgents(){ return agentsData.filter(a=>a.activo!==false); }
+    function agentOptions(selected){ return '<option value="">Sin asignar</option>'+activeAgents().map(a=>`<option value="${esc(a.id)}" ${a.id===selected?'selected':''}>${esc(a.nombre_completo||a.email)} (${esc(a.rol||'agent')})</option>`).join(''); }
+    function fillConfigSelect(id, arr, selected){ $(id).innerHTML=(arr||[]).map(c=>`<option value="${esc(c)}" ${c===selected?'selected':''}>${esc(c)}</option>`).join(''); }
+
+    function renderTickets(){
+      const tbody=$('tickets-table-body'); const ft=($('filter-tickets')?.value||'').toLowerCase();
+      const filtered=ticketsData.filter(t=>!ft||[t.id_str,t.usuario_nombre,t.asunto,t.categoria,t.estado,t.agente_nombre,agentName(t),t.prioridad].some(v=>String(v||'').toLowerCase().includes(ft)));
+      $('empty-tickets').classList.toggle('hidden',filtered.length!==0);
+      tbody.innerHTML=filtered.map(t=>{
+        const rating=t.valoracion_calificacion?`<div>${[1,2,3,4,5].map(i=>`<i class="fa-solid fa-star ${i<=t.valoracion_calificacion?'text-yellow-400':'text-gray-200'}"></i>`).join('')}</div>`:'<span class="text-xs text-gray-400 italic">Pendiente</span>';
+        const tiempo=t.estado==='Resuelto'?formatMinutes(ticketResolutionMinutes(t)):'<span class="text-xs text-gray-400 italic">En proceso</span>';
+        return `<tr class="hover:bg-gray-50"><td class="px-6 py-4"><div class="font-bold text-instVerdeOscuro">${esc(t.id_str)}</div><div class="text-xs text-gray-500">${esc((t.created_at||'').slice(0,10))}</div></td><td class="px-6 py-4"><div class="font-medium">${esc(t.usuario_nombre)}</div><div class="text-xs text-gray-500"><i class="fa-solid fa-headset mr-1"></i>Creado por ${esc(t.agente_nombre)}</div></td><td class="px-6 py-4 truncate max-w-xs" title="${esc(t.asunto)}"><div class="font-medium">${esc(t.asunto)}</div><div class="text-xs text-instPlomo">${esc(t.categoria)}</div></td><td class="px-6 py-4"><span class="px-3 py-1 rounded-full text-xs font-semibold border ${statusBadge(t)}">${esc(t.estado)}</span><div class="text-xs text-gray-500 mt-1">${esc(t.prioridad||'')}</div></td><td class="px-6 py-4"><div class="font-medium text-instVerdeOscuro"><i class="fa-solid fa-user mr-1"></i>${esc(agentName(t))}</div><div class="text-xs text-gray-500">${esc((t.assigned_at||t.created_at||'').slice(0,16).replace('T',' '))}</div></td><td class="px-6 py-4"><div class="font-semibold">${tiempo}</div>${t.resolved_at?`<div class="text-xs text-gray-500">${esc(t.resolved_at.slice(0,16).replace('T',' '))}</div>`:''}</td><td class="px-6 py-4 text-center">${rating}</td><td class="px-6 py-4 text-center"><div class="flex justify-center gap-1">${t.estado==='Resuelto'?`<button onclick="abrirModalLink('${t.id}')" class="text-yellow-500 hover:bg-yellow-50 p-2 rounded" title="Solicitar valoración"><i class="fa-solid fa-star"></i></button>`:''}<button onclick="abrirModalEditarTicket('${t.id}')" class="text-blue-600 hover:bg-blue-50 p-2 rounded" title="Editar ticket"><i class="fa-solid fa-pen"></i></button><button onclick="abrirModalTransferirTicket('${t.id}')" class="text-purple-600 hover:bg-purple-50 p-2 rounded" title="Transferir"><i class="fa-solid fa-right-left"></i></button><button onclick="abrirModalHistorialTicket('${t.id}')" class="text-instVerdeOscuro hover:bg-green-50 p-2 rounded" title="Historial"><i class="fa-solid fa-clock-rotate-left"></i></button><button onclick="eliminarTicket('${t.id}')" class="text-instTomate hover:bg-red-50 p-2 rounded" title="Eliminar"><i class="fa-solid fa-trash"></i></button></div></td></tr>`
+      }).join('');
+    }
     async function eliminarTicket(id){ if(!confirm('¿Eliminar este ticket?'))return; const {error}=await sbClient.from('tickets').delete().eq('id',id); if(error)return showToast(error.message,'error'); showToast('Ticket eliminado'); await loadTickets(); renderTickets(); }
     window.eliminarTicket=eliminarTicket;
+    async function registrarSeguimiento(ticketId, data, notify=true){
+      const payload={ticket_id:ticketId,accion:data.accion||'Seguimiento',estado_anterior:data.estado_anterior||null,estado_nuevo:data.estado_nuevo||null,agente_origen_id:data.agente_origen_id??currentProfile?.id??null,agente_origen_nombre:data.agente_origen_nombre??currentProfile?.nombre_completo??currentUser?.email??'',agente_destino_id:data.agente_destino_id||null,agente_destino_nombre:data.agente_destino_nombre||null,comentario:data.comentario||'',created_by:currentProfile?.id||null,created_by_nombre:currentProfile?.nombre_completo||currentUser?.email||''};
+      const {error}=await sbClient.from('ticket_seguimientos').insert(payload);
+      if(error){ console.warn('No se pudo registrar seguimiento', error); if(notify) showToast('Cambios guardados, pero no se registró historial: '+error.message,'error'); }
+    }
+
+    function abrirModalEditarTicket(id){
+      const t=ticketsData.find(x=>x.id===id); if(!t)return;
+      $('edit-ticket-id').value=t.id; $('edit-ticket-title').textContent=t.id_str||''; $('edit-asunto').value=t.asunto||''; $('edit-estado').value=t.estado||'Requiere Seguimiento';
+      fillConfigSelect('edit-categoria',configData.categorias||[],t.categoria); fillConfigSelect('edit-canal',configData.canales||[],t.canal);
+      $('edit-subcategoria').value=t.subcategoria||''; $('edit-prioridad').value=t.prioridad||'Media'; $('edit-descripcion').value=t.descripcion||''; $('edit-comentario').value='';
+      $('edit-assigned-agent').innerHTML=agentOptions(agentId(t)); $('edit-tiempo').value=t.estado==='Resuelto'?formatMinutes(ticketResolutionMinutes(t)):'En proceso';
+      $('modal-editar-ticket').classList.add('flex');
+    }
+    function cerrarModalEditarTicket(){ $('modal-editar-ticket').classList.remove('flex'); }
+    window.abrirModalEditarTicket=abrirModalEditarTicket; window.cerrarModalEditarTicket=cerrarModalEditarTicket;
+
+    $('form-editar-ticket').onsubmit=async e=>{
+      e.preventDefault();
+      const id=$('edit-ticket-id').value; const old=ticketsData.find(x=>x.id===id); if(!old)return;
+      const selectedAgent=agentsData.find(a=>a.id===$('edit-assigned-agent').value);
+      const newEstado=$('edit-estado').value; const now=new Date().toISOString();
+      const payload={asunto:$('edit-asunto').value.trim(),estado:newEstado,categoria:$('edit-categoria').value,subcategoria:$('edit-subcategoria').value.trim(),prioridad:$('edit-prioridad').value,canal:$('edit-canal').value,descripcion:$('edit-descripcion').value.trim(),assigned_agent_id:selectedAgent?.id||null,assigned_agent_name:selectedAgent?(selectedAgent.nombre_completo||selectedAgent.email):null};
+      const statusChanged=old.estado!==newEstado; const agentChanged=(agentId(old)||'')!==(payload.assigned_agent_id||'');
+      if(agentChanged) payload.assigned_at=now;
+      if(statusChanged) payload.last_status_change_at=now;
+      if(newEstado==='Resuelto' && old.estado!=='Resuelto') { payload.resolved_at=now; payload.resolution_minutes=minutesBetween(old.created_at,now)??0; payload.rating_token=old.rating_token||randomToken(); }
+      if(newEstado!=='Resuelto' && old.estado==='Resuelto') { payload.resolved_at=null; payload.resolution_minutes=null; payload.rating_token=null; }
+      const {error}=await sbClient.from('tickets').update(payload).eq('id',id);
+      if(error)return showToast(error.message,'error');
+      const cambios=[]; if(statusChanged)cambios.push(`estado: ${old.estado} -> ${newEstado}`); if(agentChanged)cambios.push(`agente: ${agentName(old)} -> ${payload.assigned_agent_name||'Sin asignar'}`);
+      await registrarSeguimiento(id,{accion:statusChanged?'Cambio de estado':agentChanged?'Reasignación':'Edición',estado_anterior:old.estado,estado_nuevo:newEstado,agente_destino_id:payload.assigned_agent_id,agente_destino_nombre:payload.assigned_agent_name,comentario:$('edit-comentario').value.trim()||cambios.join('; ')||'Actualización de datos del ticket.'},false);
+      showToast('Ticket actualizado'); cerrarModalEditarTicket(); await loadTickets(); renderTickets(); populateDashboardFilters(); renderDashboard(); renderInformePreview();
+    };
+
+    function abrirModalTransferirTicket(id){
+      const t=ticketsData.find(x=>x.id===id); if(!t)return;
+      $('transfer-ticket-id').value=t.id; $('transfer-ticket-label').textContent=`${t.id_str} - ${t.asunto||''}`; $('transfer-current-agent').textContent=agentName(t);
+      $('transfer-agent').innerHTML=activeAgents().filter(a=>a.id!==agentId(t)).map(a=>`<option value="${esc(a.id)}">${esc(a.nombre_completo||a.email)} (${esc(a.rol||'agent')})</option>`).join('');
+      $('transfer-motivo').value=''; $('transfer-comentario').value=''; $('modal-transferir-ticket').classList.add('flex');
+    }
+    function abrirModalTransferirDesdeEdicion(){ const id=$('edit-ticket-id').value; cerrarModalEditarTicket(); abrirModalTransferirTicket(id); }
+    function cerrarModalTransferirTicket(){ $('modal-transferir-ticket').classList.remove('flex'); }
+    window.abrirModalTransferirTicket=abrirModalTransferirTicket; window.abrirModalTransferirDesdeEdicion=abrirModalTransferirDesdeEdicion; window.cerrarModalTransferirTicket=cerrarModalTransferirTicket;
+
+    $('form-transferir-ticket').onsubmit=async e=>{
+      e.preventDefault();
+      const id=$('transfer-ticket-id').value; const old=ticketsData.find(x=>x.id===id); if(!old)return;
+      const agent=agentsData.find(a=>a.id===$('transfer-agent').value); if(!agent)return showToast('Selecciona un agente destino','error');
+      const now=new Date().toISOString();
+      const payload={assigned_agent_id:agent.id,assigned_agent_name:agent.nombre_completo||agent.email,assigned_at:now,estado:'Requiere Seguimiento',last_status_change_at:old.estado==='Requiere Seguimiento'?old.last_status_change_at:now};
+      if(old.estado==='Resuelto'){payload.resolved_at=null;payload.resolution_minutes=null;payload.rating_token=null;}
+      const {error}=await sbClient.from('tickets').update(payload).eq('id',id);
+      if(error)return showToast(error.message,'error');
+      await registrarSeguimiento(id,{accion:'Transferencia',estado_anterior:old.estado,estado_nuevo:'Requiere Seguimiento',agente_origen_id:agentId(old),agente_origen_nombre:agentName(old),agente_destino_id:agent.id,agente_destino_nombre:agent.nombre_completo||agent.email,comentario:`${$('transfer-motivo').value}. ${$('transfer-comentario').value.trim()}`},false);
+      showToast('Ticket transferido'); cerrarModalTransferirTicket(); await loadTickets(); renderTickets(); populateDashboardFilters(); renderDashboard(); renderInformePreview();
+    };
+
+    async function abrirModalHistorialTicket(id){
+      const t=ticketsData.find(x=>x.id===id); if(!t)return;
+      $('historial-ticket-label').textContent=`${t.id_str} - ${t.asunto||''}`;
+      $('historial-ticket-body').innerHTML='<div class="text-center py-8 text-gray-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Cargando historial...</div>';
+      $('modal-historial-ticket').classList.add('flex');
+      const {data,error}=await sbClient.from('ticket_seguimientos').select('*').eq('ticket_id',id).order('created_at',{ascending:true});
+      if(error){$('historial-ticket-body').innerHTML=`<div class="bg-red-50 text-red-700 border border-red-200 rounded-xl p-4 text-sm">${esc(error.message)}</div>`;return;}
+      const base=`<div class="bg-gray-50 border rounded-xl p-4 text-sm"><div class="grid grid-cols-1 md:grid-cols-3 gap-3"><div><b>Creado:</b><br>${esc((t.created_at||'').replace('T',' ').slice(0,16))}</div><div><b>Asignado:</b><br>${esc(agentName(t))}</div><div><b>Tiempo:</b><br>${esc(t.estado==='Resuelto'?formatMinutes(ticketResolutionMinutes(t)):'En proceso')}</div></div></div>`;
+      const items=(data||[]).map((h,i)=>`<div class="relative pl-8 pb-4 border-l-2 ${i===0?'border-instVerdeClaro':'border-gray-200'}"><span class="absolute -left-2 top-0 w-4 h-4 rounded-full ${h.accion==='Transferencia'?'bg-blue-500':h.accion==='Cambio de estado'?'bg-orange-500':'bg-instVerdeClaro'}"></span><div class="bg-white border rounded-xl p-4 shadow-sm"><div class="flex flex-col sm:flex-row sm:justify-between gap-1"><b class="text-instVerdeOscuro">${esc(h.accion)}</b><span class="text-xs text-gray-500">${esc((h.created_at||'').replace('T',' ').slice(0,16))}</span></div><p class="text-xs text-gray-500 mt-1">Por ${esc(h.created_by_nombre||h.agente_origen_nombre||'Sistema')}</p>${h.estado_anterior||h.estado_nuevo?`<p class="text-sm mt-2"><b>Estado:</b> ${esc(h.estado_anterior||'-')} -> ${esc(h.estado_nuevo||'-')}</p>`:''}${h.agente_destino_nombre?`<p class="text-sm"><b>Destino:</b> ${esc(h.agente_destino_nombre)}</p>`:''}${h.comentario?`<div class="mt-2 bg-gray-50 rounded-lg p-3 text-sm">${esc(h.comentario)}</div>`:''}</div></div>`).join('');
+      $('historial-ticket-body').innerHTML=base+(items||'<div class="text-center py-8 text-gray-500">Aún no hay seguimientos registrados.</div>');
+    }
+    function cerrarModalHistorialTicket(){ $('modal-historial-ticket').classList.remove('flex'); }
+    window.abrirModalHistorialTicket=abrirModalHistorialTicket; window.cerrarModalHistorialTicket=cerrarModalHistorialTicket;
+
     async function abrirModalLink(id){ const t=ticketsData.find(x=>x.id===id); if(!t)return; let token=t.rating_token; if(!token){ token=randomToken(); const {error}=await sbClient.from('tickets').update({rating_token:token}).eq('id',id); if(error)return showToast(error.message,'error'); t.rating_token=token; } const base=window.location.href.split('#')[0].split('?')[0]; const link=`${base}#rate_ticket=${encodeURIComponent(id)}&token=${encodeURIComponent(token)}`; $('url-valoracion').value=link; $('btn-test-valoracion').onclick=()=>{window.open(link,'_blank')}; $('modal-link-valoracion').classList.add('flex'); }
     window.abrirModalLink=abrirModalLink; window.cerrarModalLink=()=>$('modal-link-valoracion').classList.remove('flex'); window.copiarUrlValoracion=async()=>{const val=$('url-valoracion').value; try{await navigator.clipboard.writeText(val)}catch(e){$('url-valoracion').select();document.execCommand('copy')} showToast('Enlace copiado')};
 

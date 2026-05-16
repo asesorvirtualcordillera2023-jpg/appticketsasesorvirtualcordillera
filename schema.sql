@@ -40,6 +40,12 @@ create table if not exists public.tickets (
   fecha_texto text,
   agente_id uuid references public.agentes(id),
   agente_nombre text,
+  assigned_agent_id uuid references public.agentes(id),
+  assigned_agent_name text,
+  assigned_at timestamptz,
+  resolved_at timestamptz,
+  resolution_minutes int,
+  last_status_change_at timestamptz,
   usuario_id uuid references public.directorio(id),
   usuario_cedula text,
   usuario_nombre text,
@@ -60,6 +66,22 @@ create table if not exists public.tickets (
 
 
 
+create table if not exists public.ticket_seguimientos (
+  id uuid primary key default gen_random_uuid(),
+  ticket_id uuid not null references public.tickets(id) on delete cascade,
+  accion text not null default 'Seguimiento',
+  estado_anterior text,
+  estado_nuevo text,
+  agente_origen_id uuid references public.agentes(id),
+  agente_origen_nombre text,
+  agente_destino_id uuid references public.agentes(id),
+  agente_destino_nombre text,
+  comentario text,
+  created_by uuid references public.agentes(id),
+  created_by_nombre text,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.informes_documentales (
   id uuid primary key default gen_random_uuid(),
   titulo text not null,
@@ -72,11 +94,38 @@ create table if not exists public.informes_documentales (
   created_at timestamptz not null default now()
 );
 
+alter table public.tickets
+  add column if not exists assigned_agent_id uuid references public.agentes(id),
+  add column if not exists assigned_agent_name text,
+  add column if not exists assigned_at timestamptz,
+  add column if not exists resolved_at timestamptz,
+  add column if not exists resolution_minutes int,
+  add column if not exists last_status_change_at timestamptz;
+
+update public.tickets
+   set assigned_agent_id = coalesce(assigned_agent_id, agente_id),
+       assigned_agent_name = coalesce(assigned_agent_name, agente_nombre),
+       assigned_at = coalesce(assigned_at, created_at),
+       last_status_change_at = coalesce(last_status_change_at, updated_at, created_at)
+ where assigned_agent_id is null
+    or assigned_agent_name is null
+    or assigned_at is null
+    or last_status_change_at is null;
+
+update public.tickets
+   set resolved_at = coalesce(resolved_at, updated_at, created_at),
+       resolution_minutes = coalesce(resolution_minutes, greatest(0, round(extract(epoch from (coalesce(updated_at, created_at) - created_at)) / 60)::int))
+ where estado = 'Resuelto'
+   and (resolved_at is null or resolution_minutes is null);
+
 create index if not exists idx_informes_documentales_created_at on public.informes_documentales(created_at desc);
 
 create index if not exists idx_tickets_created_at on public.tickets(created_at desc);
 create index if not exists idx_tickets_estado on public.tickets(estado);
 create index if not exists idx_tickets_rating_token on public.tickets(rating_token);
+create index if not exists idx_tickets_assigned_agent_id on public.tickets(assigned_agent_id);
+create index if not exists idx_tickets_resolved_at on public.tickets(resolved_at desc);
+create index if not exists idx_ticket_seguimientos_ticket_id on public.ticket_seguimientos(ticket_id, created_at);
 create index if not exists idx_directorio_cedula on public.directorio(cedula);
 
 create or replace function public.set_updated_at()
@@ -104,6 +153,7 @@ alter table public.directorio enable row level security;
 alter table public.app_config enable row level security;
 alter table public.tickets enable row level security;
 alter table public.informes_documentales enable row level security;
+alter table public.ticket_seguimientos enable row level security;
 
 -- Limpieza para re-ejecución segura
 DROP POLICY IF EXISTS "agentes_select_authenticated" ON public.agentes;
@@ -117,6 +167,10 @@ DROP POLICY IF EXISTS "tickets_rating_public_select" ON public.tickets;
 DROP POLICY IF EXISTS "tickets_rating_public_update" ON public.tickets;
 DROP POLICY IF EXISTS "informes_select_authenticated" ON public.informes_documentales;
 DROP POLICY IF EXISTS "informes_insert_authenticated" ON public.informes_documentales;
+DROP POLICY IF EXISTS "seguimientos_select_authenticated" ON public.ticket_seguimientos;
+DROP POLICY IF EXISTS "seguimientos_insert_authenticated" ON public.ticket_seguimientos;
+DROP POLICY IF EXISTS "seguimientos_update_admin" ON public.ticket_seguimientos;
+DROP POLICY IF EXISTS "seguimientos_delete_admin" ON public.ticket_seguimientos;
 
 create policy "agentes_select_authenticated"
 on public.agentes for select
@@ -172,6 +226,28 @@ create policy "informes_insert_authenticated"
 on public.informes_documentales for insert
 to authenticated
 with check (exists (select 1 from public.agentes a where a.auth_user_id = auth.uid() and a.activo));
+
+create policy "seguimientos_select_authenticated"
+on public.ticket_seguimientos for select
+to authenticated
+using (exists (select 1 from public.agentes a where a.auth_user_id = auth.uid() and a.activo));
+
+create policy "seguimientos_insert_authenticated"
+on public.ticket_seguimientos for insert
+to authenticated
+with check (exists (select 1 from public.agentes a where a.auth_user_id = auth.uid() and a.activo));
+
+create policy "seguimientos_update_admin"
+on public.ticket_seguimientos for update
+to authenticated
+using (exists (select 1 from public.agentes a where a.auth_user_id = auth.uid() and a.rol = 'admin' and a.activo))
+with check (exists (select 1 from public.agentes a where a.auth_user_id = auth.uid() and a.rol = 'admin' and a.activo));
+
+create policy "seguimientos_delete_admin"
+on public.ticket_seguimientos for delete
+to authenticated
+using (exists (select 1 from public.agentes a where a.auth_user_id = auth.uid() and a.rol = 'admin' and a.activo));
+
 
 -- Valoración pública: permite ver solo el ticket con token y actualizar solo la calificación pendiente.
 create policy "tickets_rating_public_select"
