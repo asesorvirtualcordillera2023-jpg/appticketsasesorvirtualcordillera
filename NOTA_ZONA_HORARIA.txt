@@ -1,0 +1,15 @@
+Correccion aplicada: visualizacion de fechas y horas
+
+La aplicacion mantiene las fechas en Supabase en UTC, como recomienda PostgreSQL/Supabase, pero ahora las muestra en zona horaria de Ecuador:
+America/Guayaquil (UTC-5).
+
+Se corrigio la visualizacion en:
+- Registros de tickets
+- Agente asignado
+- Fecha de resolucion
+- Historial / seguimiento
+- Exportaciones de tickets
+- Informe documental
+- Dashboard y filtros por fecha
+
+No requiere ejecutar SQL ni modificar el schema.
