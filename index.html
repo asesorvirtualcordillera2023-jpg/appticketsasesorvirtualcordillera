@@ -288,6 +288,38 @@
     </div>
   </div>
 
+
+  <div id="modal-editar-usuario-directorio" class="modal fixed inset-0 bg-black/50 z-[140] items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto">
+      <div class="p-6 border-b flex items-center justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-bold text-instVerdeOscuro">Modificar Registro del Directorio</h2>
+          <p class="text-xs text-gray-500">Actualiza la información del usuario sin cambiar la estructura de la base.</p>
+        </div>
+        <button onclick="cerrarModalEditarUsuarioDirectorio()" class="text-gray-400 hover:text-red-500 text-2xl"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="form-editar-usuario-directorio" class="p-6 space-y-4">
+        <input type="hidden" id="edit-dir-id">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div><label class="block text-sm font-semibold mb-1">Cédula *</label><input type="text" id="edit-dir-cedula" class="field" required></div>
+          <div><label class="block text-sm font-semibold mb-1">Tipo *</label><select id="edit-dir-tipo" class="field" required><option>Estudiante</option><option>Docente</option><option>Administrativo</option></select></div>
+          <div class="md:col-span-2"><label class="block text-sm font-semibold mb-1">Nombres y Apellidos *</label><input type="text" id="edit-dir-nombres" class="field" required></div>
+          <div><label class="block text-sm font-semibold mb-1">Correo electrónico</label><input type="email" id="edit-dir-correo" class="field"></div>
+          <div><label class="block text-sm font-semibold mb-1">Carrera / Área</label><input type="text" id="edit-dir-carrera" class="field"></div>
+          <div><label class="block text-sm font-semibold mb-1">Nivel</label><input type="text" id="edit-dir-nivel" class="field"></div>
+          <div><label class="block text-sm font-semibold mb-1">Periodo</label><input type="text" id="edit-dir-periodo" class="field"></div>
+        </div>
+        <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">
+          <b>Nota:</b> si cambias la cédula, los tickets antiguos mantendrán la cédula registrada originalmente. Para conservar trazabilidad, modifica la cédula solo si fue digitada con error.
+        </div>
+        <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t">
+          <button type="button" onclick="cerrarModalEditarUsuarioDirectorio()" class="btn btn-muted px-4 py-2">Cancelar</button>
+          <button type="submit" class="btn btn-green px-5 py-2"><i class="fa-solid fa-floppy-disk"></i> Guardar cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     const SUPABASE_URL = 'https://nuzhzroufdpbmdomwfaf.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_9GD88bBJ-wNPWFVfpH6WyA_WRjzNCYA';
@@ -655,11 +687,51 @@
       const rows = directorioData.filter(u => !term || [u.cedula,u.nombres,u.tipo,u.correo,u.carrera,u.nivel,u.periodo].some(v => String(v||'').toLowerCase().includes(term)));
       $('dir-count').textContent = `${rows.length} / ${directorioData.length}`;
       $('empty-db-warning').classList.toggle('hidden',directorioData.length>0);
-      $('directorio-table-body').innerHTML = rows.map(u=>`<tr class="hover:bg-gray-50 border-b"><td class="px-4 py-3 font-medium">${esc(u.cedula)}</td><td class="px-4 py-3">${esc(u.nombres)}</td><td class="px-4 py-3 text-xs"><span class="bg-purple-100 text-purple-700 px-2 py-1 rounded">${esc(u.tipo)}</span></td><td class="px-4 py-3"><button onclick="eliminarUsuario('${u.id}')" class="text-red-500 hover:bg-red-50 p-1 rounded"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('');
+      $('directorio-table-body').innerHTML = rows.map(u=>`<tr class="hover:bg-gray-50 border-b"><td class="px-4 py-3 font-medium">${esc(u.cedula)}</td><td class="px-4 py-3"><div class="font-medium">${esc(u.nombres)}</div><div class="text-xs text-gray-500">${esc(u.correo||'')}</div></td><td class="px-4 py-3 text-xs"><span class="bg-purple-100 text-purple-700 px-2 py-1 rounded">${esc(u.tipo)}</span></td><td class="px-4 py-3"><div class="flex items-center gap-2"><button onclick="abrirModalEditarUsuarioDirectorio('${u.id}')" class="text-blue-600 hover:bg-blue-50 p-2 rounded" title="Modificar registro"><i class="fa-solid fa-pen-to-square"></i></button><button onclick="eliminarUsuario('${u.id}')" class="text-red-500 hover:bg-red-50 p-2 rounded" title="Eliminar registro"><i class="fa-solid fa-trash"></i></button></div></td></tr>`).join('');
       if(!rows.length) $('directorio-table-body').innerHTML = '<tr><td colspan="4" class="text-center py-8 text-sm text-gray-500 bg-gray-50">No hay usuarios para mostrar con el filtro actual.</td></tr>';
     }
     async function eliminarUsuario(id){ if(!confirm('¿Eliminar usuario del directorio?'))return; const {error}=await sbClient.from('directorio').delete().eq('id',id); if(error)return showToast(error.message,'error'); showToast('Usuario eliminado'); await loadDirectory(); renderDirectorio(); }
     window.eliminarUsuario=eliminarUsuario;
+    function abrirModalEditarUsuarioDirectorio(id){
+      const u = directorioData.find(x => String(x.id) === String(id));
+      if(!u) return showToast('No se encontró el registro del directorio','error');
+      $('edit-dir-id').value = u.id;
+      $('edit-dir-cedula').value = u.cedula || '';
+      $('edit-dir-nombres').value = u.nombres || '';
+      $('edit-dir-correo').value = u.correo || '';
+      $('edit-dir-carrera').value = u.carrera || '';
+      $('edit-dir-nivel').value = u.nivel || '';
+      $('edit-dir-tipo').value = u.tipo || 'Estudiante';
+      $('edit-dir-periodo').value = u.periodo || '';
+      $('modal-editar-usuario-directorio').classList.add('flex');
+    }
+    function cerrarModalEditarUsuarioDirectorio(){ $('modal-editar-usuario-directorio').classList.remove('flex'); }
+    $('form-editar-usuario-directorio').onsubmit = async e => {
+      e.preventDefault();
+      const id = $('edit-dir-id').value;
+      if(!id) return showToast('No se encontró el ID del registro','error');
+      const data = {
+        cedula: $('edit-dir-cedula').value.trim(),
+        nombres: $('edit-dir-nombres').value.trim(),
+        correo: $('edit-dir-correo').value.trim(),
+        carrera: $('edit-dir-carrera').value.trim(),
+        nivel: $('edit-dir-nivel').value.trim(),
+        tipo: $('edit-dir-tipo').value,
+        periodo: $('edit-dir-periodo').value.trim()
+      };
+      if(!data.cedula || !data.nombres) return showToast('Cédula y nombres son obligatorios','error');
+      const duplicate = directorioData.find(u => String(u.id) !== String(id) && String(u.cedula||'').trim() === data.cedula);
+      if(duplicate) return showToast('Ya existe otro usuario con esa cédula','error');
+      const { error } = await sbClient.from('directorio').update(data).eq('id', id);
+      if(error) return showToast(error.message,'error');
+      showToast('Registro actualizado');
+      cerrarModalEditarUsuarioDirectorio();
+      await loadDirectory();
+      renderDirectorio();
+    };
+    window.abrirModalEditarUsuarioDirectorio = abrirModalEditarUsuarioDirectorio;
+    window.cerrarModalEditarUsuarioDirectorio = cerrarModalEditarUsuarioDirectorio;
+
     function renderAgents(){
       if($('agents-count')) $('agents-count').textContent = `${agentsData.length} agentes`;
       const admin = isAdmin();
