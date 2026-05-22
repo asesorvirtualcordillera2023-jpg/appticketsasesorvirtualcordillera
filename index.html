@@ -193,7 +193,20 @@
                 <input type="hidden" id="agent-edit-id">
                 <input type="text" id="agent-admin-name" class="field" placeholder="Nombre completo">
                 <input type="email" id="agent-admin-email" class="field" placeholder="Correo institucional" required>
-                <select id="agent-admin-role" class="field"><option value="agent">Agente</option><option value="admin">Administrador</option></select>
+                <select id="agent-admin-role" class="field">
+                  <option value="agent">Agente básico</option>
+                  <option value="advanced">Agente soporte avanzado</option>
+                  <option value="coordinator">Coordinador</option>
+                  <option value="admin">Administrador</option>
+                </select>
+                <div class="bg-gray-50 border rounded-xl p-3">
+                  <div class="flex items-center justify-between gap-3 mb-2">
+                    <p class="text-xs font-semibold text-instVerdeOscuro uppercase">Permisos por módulo</p>
+                    <button type="button" id="btn-apply-role-preset" class="text-xs text-instTomate font-semibold hover:underline">Aplicar nivel</button>
+                  </div>
+                  <div id="agent-permissions-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm"></div>
+                  <p class="text-[11px] text-gray-500 mt-2">Administrador tiene acceso total. En agentes puedes ajustar los módulos visibles y operativos.</p>
+                </div>
                 <label class="flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" id="agent-admin-active" checked class="w-4 h-4"> Activo</label>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button type="submit" class="btn btn-primary py-2"><i class="fa-solid fa-floppy-disk"></i> Actualizar perfil</button>
@@ -212,7 +225,7 @@
                 <div><h3 class="font-semibold text-gray-700">Agentes registrados</h3><p class="text-xs text-instPlomo">Solo los administradores pueden modificar rol, estado y generar enlaces.</p></div>
                 <span id="agents-count" class="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full">0 agentes</span>
               </div>
-              <div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="bg-gray-50"><tr><th class="px-4 py-3">Nombre</th><th class="px-4 py-3">Correo</th><th class="px-4 py-3">Rol</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3">Creado</th><th class="px-4 py-3 text-center">Acciones</th></tr></thead><tbody id="agents-table-body"></tbody></table></div>
+              <div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="bg-gray-50"><tr><th class="px-4 py-3">Nombre</th><th class="px-4 py-3">Correo</th><th class="px-4 py-3">Nivel</th><th class="px-4 py-3">Módulos</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3">Creado</th><th class="px-4 py-3 text-center">Acciones</th></tr></thead><tbody id="agents-table-body"></tbody></table></div>
             </div>
           </div>
           <div id="agents-not-admin" class="hidden bg-white rounded-2xl shadow-sm border p-8 text-center">
@@ -411,6 +424,52 @@
     const randomToken = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)+Date.now());
     const appBaseUrl = () => window.location.href.split('#')[0].split('?')[0];
     const isAdmin = () => currentProfile?.rol === 'admin' && currentProfile?.activo !== false;
+    const MODULE_PERMISSIONS = [
+      {key:'notificaciones', tab:'tab-notificaciones', label:'Notificaciones', defaultBasic:true},
+      {key:'form', tab:'tab-form', label:'Nuevo Ticket', defaultBasic:true},
+      {key:'registros', tab:'tab-registros', label:'Registros', defaultBasic:true},
+      {key:'dashboard', tab:'tab-dashboard', label:'Dashboard', defaultBasic:false},
+      {key:'reportes', tab:'tab-reportes', label:'Reportes', defaultBasic:false},
+      {key:'informe', tab:'tab-informe', label:'Informe Documental', defaultBasic:false},
+      {key:'directorio', tab:'tab-directorio', label:'Directorio', defaultBasic:true},
+      {key:'agentes', tab:'tab-agentes', label:'Agentes', defaultBasic:false},
+      {key:'config', tab:'tab-config', label:'Configuración', defaultBasic:false}
+    ];
+    const ROLE_PRESETS = {
+      agent: {notificaciones:true, form:true, registros:true, dashboard:false, reportes:false, informe:false, directorio:true, agentes:false, config:false},
+      advanced: {notificaciones:true, form:true, registros:true, dashboard:true, reportes:true, informe:false, directorio:true, agentes:false, config:false},
+      coordinator: {notificaciones:true, form:true, registros:true, dashboard:true, reportes:true, informe:true, directorio:true, agentes:false, config:false},
+      admin: {notificaciones:true, form:true, registros:true, dashboard:true, reportes:true, informe:true, directorio:true, agentes:true, config:true}
+    };
+    const roleLabels = {admin:'Administrador', coordinator:'Coordinador', advanced:'Agente soporte avanzado', agent:'Agente básico'};
+    function permissionsFromRole(role){ return {...(ROLE_PRESETS[role] || ROLE_PRESETS.agent)}; }
+    function normalizeRole(role){ return ['admin','coordinator','advanced','agent'].includes(role) ? role : 'agent'; }
+    function normalizePermissions(role, perms){ return {...permissionsFromRole(normalizeRole(role)), ...(perms && typeof perms === 'object' ? perms : {})}; }
+    function userPermissions(){ return normalizePermissions(currentProfile?.rol, currentProfile?.permisos); }
+    function hasModuleAccess(tabId){
+      if(isAdmin()) return true;
+      const mod = MODULE_PERMISSIONS.find(m => m.tab === tabId || ('tab-'+m.key) === tabId);
+      if(!mod) return true;
+      return !!userPermissions()[mod.key];
+    }
+    function firstAllowedTab(){
+      const order = ['tab-notificaciones','tab-form','tab-registros','tab-dashboard','tab-reportes','tab-informe','tab-directorio','tab-agentes','tab-config'];
+      return order.find(hasModuleAccess) || 'tab-form';
+    }
+    function permissionsSummary(perms, role){
+      const normalized = normalizePermissions(role, perms);
+      if(normalizeRole(role)==='admin') return 'Todos los módulos';
+      const labels = MODULE_PERMISSIONS.filter(m=>normalized[m.key]).map(m=>m.label);
+      return labels.length ? labels.join(', ') : 'Sin módulos habilitados';
+    }
+    function applyRoleAccess(){
+      document.querySelectorAll('.nav-btn').forEach(btn=>{
+        const tab = btn.id ? btn.id.replace('btn-','') : '';
+        btn.classList.toggle('hidden', !hasModuleAccess(tab));
+      });
+      const active = document.querySelector('.tab-content.active');
+      if(active && !hasModuleAccess(active.id)) switchTab(firstAllowedTab());
+    }
 
     function showToast(message,type='success'){const c=$('toast-container');const t=document.createElement('div');t.className=`${type==='success'?'bg-instVerdeClaro':'bg-instTomate'} text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 transform transition-all duration-300 translate-x-full opacity-0 pointer-events-auto`;t.innerHTML=`<i class="fa-solid ${type==='success'?'fa-check-circle':'fa-circle-exclamation'} text-xl"></i><span class="font-medium text-sm">${esc(message)}</span>`;c.appendChild(t);setTimeout(()=>t.classList.remove('translate-x-full','opacity-0'),10);setTimeout(()=>{t.classList.add('translate-x-full','opacity-0');setTimeout(()=>t.remove(),300)},3200)}
 
@@ -444,7 +503,8 @@
     function showAuth(){ $('auth-overlay').classList.remove('hidden'); $('auth-overlay').classList.add('flex'); $('app-container').classList.add('hidden'); initAuthFromUrl(); }
     function showApp(){
       $('auth-overlay').classList.add('hidden'); $('auth-overlay').classList.remove('flex'); $('app-container').classList.remove('hidden');
-      $('display-agent-name').textContent=currentProfile?.nombre_completo||currentUser.email; $('display-agent-role').textContent=currentProfile?.rol||'agent';
+      $('display-agent-name').textContent=currentProfile?.nombre_completo||currentUser.email; $('display-agent-role').textContent=roleLabels[normalizeRole(currentProfile?.rol)]||'Agente básico';
+      applyRoleAccess();
       const admin = isAdmin();
       if($('agents-admin-panel')) $('agents-admin-panel').classList.toggle('hidden', !admin);
       if($('agents-not-admin')) $('agents-not-admin').classList.toggle('hidden', admin);
@@ -454,8 +514,8 @@
       if(error) throw new Error(`No se pudo consultar la tabla agentes: ${error.message}`);
       if(!data){
         const name=currentUser.user_metadata?.full_name||currentUser.email;
-        const invitedRole = currentUser.user_metadata?.role || getParamRobust('role') || 'agent';
-        const {data:newP,error:insertError}=await sbClient.from('agentes').insert({auth_user_id:currentUser.id,nombre_completo:name,email:currentUser.email,rol:invitedRole === 'admin' ? 'admin' : 'agent'}).select().single();
+        const invitedRole = normalizeRole(currentUser.user_metadata?.role || getParamRobust('role') || 'agent');
+        const {data:newP,error:insertError}=await sbClient.from('agentes').insert({auth_user_id:currentUser.id,nombre_completo:name,email:currentUser.email,rol:invitedRole,permisos:permissionsFromRole(invitedRole),activo:invitedRole==='admin'?true:true}).select().single();
         if(insertError) throw new Error(`No se pudo crear el perfil del agente: ${insertError.message}`);
         currentProfile=newP;
       } else currentProfile=data;
@@ -520,7 +580,7 @@
       const email=getParamRobust('email'), name=getParamRobust('name'), role=getParamRobust('role');
       if(email){ if($('login-email')) $('login-email').value=email; if($('reg-email')) $('reg-email').value=email; if($('reset-email')) $('reset-email').value=email; }
       if(name && $('reg-name')) $('reg-name').value=name;
-      if(role && $('reg-role')) { $('reg-role').value = role === 'admin' ? 'admin' : 'agent'; $('reg-role-label').textContent = role === 'admin' ? 'Administrador' : 'Agente'; $('reg-role-display').classList.remove('hidden'); }
+      if(role && $('reg-role')) { const r=normalizeRole(role); $('reg-role').value = r; $('reg-role-label').textContent = roleLabels[r] || 'Agente básico'; $('reg-role-display').classList.remove('hidden'); }
     }
     function initAuthFromUrl(){
       applyAuthPrefill();
@@ -529,12 +589,12 @@
     }
     $('show-login').onclick=()=>setAuthMode('login'); $('show-register').onclick=()=>setAuthMode('register'); $('show-reset').onclick=()=>setAuthMode('reset');
     $('login-form').onsubmit=async e=>{e.preventDefault(); const {data,error}=await sbClient.auth.signInWithPassword({email:$('login-email').value,password:$('login-password').value}); if(error)return showToast(error.message,'error'); currentUser=data.user; await loadProfile(); await loadAll(); showApp(); showToast('Bienvenido')};
-    $('register-form').onsubmit=async e=>{e.preventDefault(); const name=$('reg-name').value.trim(), email=$('reg-email').value.trim(), password=$('reg-password').value; const {data,error}=await sbClient.auth.signUp({email,password,options:{data:{full_name:name,role:$('reg-role').value},emailRedirectTo:window.location.origin+window.location.pathname}}); if(error)return showToast(error.message,'error'); if(data.user){await sbClient.from('agentes').upsert({auth_user_id:data.user.id,nombre_completo:name,email,rol:$('reg-role').value,activo:true},{onConflict:'auth_user_id'});} showToast('Cuenta creada. Si Supabase solicita confirmación, revisa el correo.'); setAuthMode('login')};
+    $('register-form').onsubmit=async e=>{e.preventDefault(); const name=$('reg-name').value.trim(), email=$('reg-email').value.trim(), password=$('reg-password').value; const role=normalizeRole($('reg-role').value||'agent'); const {data,error}=await sbClient.auth.signUp({email,password,options:{data:{full_name:name,role},emailRedirectTo:window.location.origin+window.location.pathname}}); if(error)return showToast(error.message,'error'); if(data.user){await sbClient.from('agentes').upsert({auth_user_id:data.user.id,nombre_completo:name,email,rol:role,permisos:permissionsFromRole(role),activo:true},{onConflict:'auth_user_id'});} showToast('Cuenta creada. Si Supabase solicita confirmación, revisa el correo.'); setAuthMode('login')};
     $('reset-form').onsubmit=async e=>{e.preventDefault(); const {error}=await sbClient.auth.resetPasswordForEmail($('reset-email').value,{redirectTo:window.location.origin+window.location.pathname}); if(error)return showToast(error.message,'error'); showToast('Enlace de recuperación enviado')};
     async function logout(){ await sbClient.auth.signOut(); location.reload(); }
     window.logout=logout;
 
-    function switchTab(tabId){ document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active')); $(tabId).classList.add('active'); document.querySelectorAll('.nav-btn').forEach(b=>{b.classList.remove('bg-instVerdeClaro','text-instVerdeOscuro','shadow-md');b.classList.add('hover:bg-white/10','text-white')}); const btn=$('btn-'+tabId); if(btn){btn.classList.remove('hover:bg-white/10','text-white');btn.classList.add('bg-instVerdeClaro','text-instVerdeOscuro','shadow-md')} if(tabId==='tab-dashboard'){populateDashboardFilters();renderDashboard()} if(tabId==='tab-informe'){populateInformeFilters();renderInformePreview()} if(tabId==='tab-notificaciones'){loadNotifications().then(renderNotifications)} }
+    function switchTab(tabId){ if(!hasModuleAccess(tabId)){ showToast('No tienes permiso para acceder a este módulo','error'); tabId=firstAllowedTab(); } document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active')); $(tabId).classList.add('active'); document.querySelectorAll('.nav-btn').forEach(b=>{b.classList.remove('bg-instVerdeClaro','text-instVerdeOscuro','shadow-md');b.classList.add('hover:bg-white/10','text-white')}); const btn=$('btn-'+tabId); if(btn){btn.classList.remove('hover:bg-white/10','text-white');btn.classList.add('bg-instVerdeClaro','text-instVerdeOscuro','shadow-md')} if(tabId==='tab-dashboard'){populateDashboardFilters();renderDashboard()} if(tabId==='tab-informe'){populateInformeFilters();renderInformePreview()} if(tabId==='tab-notificaciones'){loadNotifications().then(renderNotifications)} applyRoleAccess(); }
     window.switchTab=switchTab; window.toggleMobileMenu=()=>{const s=document.querySelector('aside');s.classList.toggle('hidden');s.classList.toggle('absolute');s.classList.toggle('h-full');s.classList.toggle('z-50')};
 
     $('search-user').addEventListener('input',e=>{ const term=e.target.value.toLowerCase(); const box=$('search-results'); if(term.length<2){box.classList.add('hidden');return} const matches=directorioData.filter(u=>(u.nombres||'').toLowerCase().includes(term)||(u.cedula||'').includes(term)).slice(0,8); box.innerHTML=matches.length?matches.map(u=>`<li data-id="${u.id}" class="p-3 hover:bg-gray-50 cursor-pointer border-b text-sm"><div class="font-semibold text-instVerdeOscuro">${esc(u.nombres)}</div><div class="text-xs text-gray-500">C.I: ${esc(u.cedula)} | ${esc(u.tipo)}</div></li>`).join(''):'<li class="p-3 text-sm text-gray-500 text-center">No encontrado</li>'; box.querySelectorAll('li[data-id]').forEach(li=>li.onclick=()=>seleccionarUsuario(directorioData.find(u=>u.id===li.dataset.id))); box.classList.remove('hidden'); });
@@ -732,24 +792,49 @@
     window.abrirModalEditarUsuarioDirectorio = abrirModalEditarUsuarioDirectorio;
     window.cerrarModalEditarUsuarioDirectorio = cerrarModalEditarUsuarioDirectorio;
 
+    function renderPermissionsGrid(selectedRole, selectedPerms){
+      const grid=$('agent-permissions-grid'); if(!grid) return;
+      const role=normalizeRole(selectedRole||$('agent-admin-role')?.value||'agent');
+      const perms=normalizePermissions(role, selectedPerms || permissionsFromRole(role));
+      grid.innerHTML=MODULE_PERMISSIONS.map(m=>{
+        const locked = role==='admin' || m.key==='agentes' || m.key==='config';
+        const checked = role==='admin' ? true : !!perms[m.key];
+        const disabled = role==='admin' ? 'disabled' : '';
+        return `<label class="flex items-center gap-2 rounded-lg border bg-white px-3 py-2 ${locked && role!=='admin'?'opacity-60':''}"><input type="checkbox" class="perm-check w-4 h-4" data-key="${m.key}" ${checked?'checked':''} ${disabled}> <span>${esc(m.label)}</span></label>`;
+      }).join('');
+    }
+    function getAgentFormPermissions(){
+      const role=normalizeRole($('agent-admin-role').value);
+      if(role==='admin') return permissionsFromRole('admin');
+      const perms=permissionsFromRole(role);
+      document.querySelectorAll('#agent-permissions-grid .perm-check').forEach(cb=>{ perms[cb.dataset.key]=cb.checked; });
+      perms.agentes=false; perms.config=false;
+      return perms;
+    }
+    function applyRolePresetToForm(){ renderPermissionsGrid($('agent-admin-role').value, permissionsFromRole($('agent-admin-role').value)); }
     function renderAgents(){
       if($('agents-count')) $('agents-count').textContent = `${agentsData.length} agentes`;
       const admin = isAdmin();
       if($('agents-admin-panel')) $('agents-admin-panel').classList.toggle('hidden', !admin);
       if($('agents-not-admin')) $('agents-not-admin').classList.toggle('hidden', admin);
       $('agents-table-body').innerHTML=agentsData.map(a=>{
-        const roleLabel=a.rol==='admin'?'Administrador':'Agente';
+        const role=normalizeRole(a.rol);
+        const roleLabel=roleLabels[role]||'Agente básico';
         const estado=a.activo?'<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">Activo</span>':'<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">Inactivo</span>';
+        const modules=permissionsSummary(a.permisos, role);
         const actions=admin?`<div class="flex justify-center gap-1"><button onclick="editAgent('${a.id}')" class="text-blue-600 hover:bg-blue-50 p-2 rounded" title="Editar"><i class="fa-solid fa-pen"></i></button><button onclick="generateAgentLoginLink('${a.id}')" class="text-green-600 hover:bg-green-50 p-2 rounded" title="Generar URL"><i class="fa-solid fa-link"></i></button><button onclick="toggleAgentActive('${a.id}')" class="text-orange-600 hover:bg-orange-50 p-2 rounded" title="Activar/Inactivar"><i class="fa-solid fa-toggle-on"></i></button><button onclick="softDeleteAgent('${a.id}')" class="text-red-600 hover:bg-red-50 p-2 rounded" title="Eliminar lógico"><i class="fa-solid fa-trash"></i></button></div>`:'<span class="text-xs text-gray-400">Sin permisos</span>';
-        return `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3 font-medium">${esc(a.nombre_completo)}</td><td class="px-4 py-3">${esc(a.email)}</td><td class="px-4 py-3"><span class="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">${esc(roleLabel)}</span></td><td class="px-4 py-3">${estado}</td><td class="px-4 py-3 text-gray-500">${esc(formatDateEcuador(a.created_at))}</td><td class="px-4 py-3 text-center">${actions}</td></tr>`;
+        return `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3 font-medium">${esc(a.nombre_completo)}</td><td class="px-4 py-3">${esc(a.email)}</td><td class="px-4 py-3"><span class="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">${esc(roleLabel)}</span></td><td class="px-4 py-3 text-xs text-gray-600 max-w-xs" title="${esc(modules)}">${esc(modules)}</td><td class="px-4 py-3">${estado}</td><td class="px-4 py-3 text-gray-500">${esc(formatDateEcuador(a.created_at))}</td><td class="px-4 py-3 text-center">${actions}</td></tr>`;
       }).join('');
+      renderPermissionsGrid($('agent-admin-role')?.value || 'agent');
     }
     function fillAgentAdminForm(agent){
+      const role=normalizeRole(agent?.rol || 'agent');
       $('agent-edit-id').value = agent?.id || '';
       $('agent-admin-name').value = agent?.nombre_completo || '';
       $('agent-admin-email').value = agent?.email || '';
-      $('agent-admin-role').value = agent?.rol === 'admin' ? 'admin' : 'agent';
+      $('agent-admin-role').value = role;
       $('agent-admin-active').checked = agent?.activo !== false;
+      renderPermissionsGrid(role, normalizePermissions(role, agent?.permisos));
     }
     function clearAgentAdminForm(){ fillAgentAdminForm(null); $('agent-link-box').classList.add('hidden'); }
     function editAgent(id){ const agent=agentsData.find(a=>a.id===id); if(!agent)return; fillAgentAdminForm(agent); $('agent-admin-name').focus(); }
@@ -757,11 +842,12 @@
       e.preventDefault();
       if(!isAdmin()) return showToast('Solo administradores pueden modificar agentes','error');
       const id=$('agent-edit-id').value;
-      if(!id) { generateAgentLoginLink(); return showToast('Para un agente nuevo, envía la URL directa. Cuando ingrese, podrás actualizar su perfil.','success'); }
-      const payload={nombre_completo:$('agent-admin-name').value.trim()||$('agent-admin-email').value.trim(), email:$('agent-admin-email').value.trim(), rol:$('agent-admin-role').value, activo:$('agent-admin-active').checked};
+      if(!id) { generateAgentLoginLink(); return showToast('Para un agente nuevo, envía la URL directa. Cuando ingrese, podrás actualizar su perfil y permisos.','success'); }
+      const role=normalizeRole($('agent-admin-role').value);
+      const payload={nombre_completo:$('agent-admin-name').value.trim()||$('agent-admin-email').value.trim(), email:$('agent-admin-email').value.trim(), rol:role, permisos:getAgentFormPermissions(), activo:$('agent-admin-active').checked};
       const {error}=await sbClient.from('agentes').update(payload).eq('id',id);
       if(error) return showToast(error.message,'error');
-      showToast('Perfil de agente actualizado'); await loadAgents(); renderAgents();
+      showToast('Perfil y permisos del agente actualizados'); await loadAgents(); renderAgents(); if(id===currentProfile?.id){ await loadProfile(); applyRoleAccess(); }
     }
     async function toggleAgentActive(id){
       if(!isAdmin()) return showToast('Solo administradores pueden modificar agentes','error');
@@ -783,7 +869,7 @@
     function buildAgentLoginUrl(agent){
       const email=agent?.email || $('agent-admin-email')?.value?.trim() || '';
       const name=agent?.nombre_completo || $('agent-admin-name')?.value?.trim() || '';
-      const role=agent?.rol || $('agent-admin-role')?.value || 'agent';
+      const role=normalizeRole(agent?.rol || $('agent-admin-role')?.value || 'agent');
       const params=new URLSearchParams({auth:'login'});
       if(email) params.set('email',email);
       if(name) params.set('name',name);
@@ -805,7 +891,7 @@
       try{await navigator.clipboard.writeText(url)}catch(e){$('agent-login-url').select();document.execCommand('copy')}
       if(show!==false) showToast('URL copiada');
     }
-    window.editAgent=editAgent; window.toggleAgentActive=toggleAgentActive; window.softDeleteAgent=softDeleteAgent; window.clearAgentAdminForm=clearAgentAdminForm; window.generateAgentLoginLink=generateAgentLoginLink; window.copyAgentLoginLink=copyAgentLoginLink; if($('agent-admin-form')) $('agent-admin-form').onsubmit=updateAgentFromForm;
+    window.editAgent=editAgent; window.toggleAgentActive=toggleAgentActive; window.softDeleteAgent=softDeleteAgent; window.clearAgentAdminForm=clearAgentAdminForm; window.generateAgentLoginLink=generateAgentLoginLink; window.copyAgentLoginLink=copyAgentLoginLink; window.applyRolePresetToForm=applyRolePresetToForm; if($('agent-admin-form')) $('agent-admin-form').onsubmit=updateAgentFromForm; if($('agent-admin-role')) $('agent-admin-role').onchange=applyRolePresetToForm; if($('btn-apply-role-preset')) $('btn-apply-role-preset').onclick=applyRolePresetToForm;
 
 
     function parseCSV(text){ const rows=[]; let row=[],cell='',q=false; for(let i=0;i<text.length;i++){const ch=text[i],nx=text[i+1]; if(ch==='"'&&q&&nx==='"'){cell+='"';i++;continue} if(ch==='"'){q=!q;continue} if(ch===','&&!q){row.push(cell);cell='';continue} if((ch==='\n'||ch==='\r')&&!q){ if(ch==='\r'&&nx==='\n')i++; row.push(cell); if(row.some(x=>x.trim()!==''))rows.push(row); row=[]; cell=''; continue } cell+=ch; } row.push(cell); if(row.some(x=>x.trim()!==''))rows.push(row); return rows; }
