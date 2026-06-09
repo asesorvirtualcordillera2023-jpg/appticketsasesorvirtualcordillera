@@ -26,6 +26,11 @@
     .rating-logo{width:4rem;height:4rem;background:#006068;border-radius:1.1rem;margin:0 auto 1rem auto;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 20px rgba(0,0,0,.16);padding:.25rem}
     .rating-logo img{width:100%;height:100%;object-fit:contain;border-radius:.85rem}
 
+
+    .agent-photo{width:2.5rem;height:2.5rem;border-radius:9999px;object-fit:cover;border:2px solid #00CE7C;background:#f3f4f6}
+    .agent-photo-sm{width:1.85rem;height:1.85rem;border-radius:9999px;object-fit:cover;border:1px solid #00CE7C;background:#f3f4f6}
+    .agent-photo-lg{width:4.5rem;height:4.5rem;border-radius:9999px;object-fit:cover;border:3px solid #00CE7C;background:#f3f4f6}
+    .agent-photo-placeholder{display:inline-flex;align-items:center;justify-content:center;border-radius:9999px;background:#00CE7C;color:#006068;font-weight:800}
     .notification-dot{min-width:1.25rem;height:1.25rem;border-radius:9999px;background:#E47E3D;color:#fff;font-size:.7rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 .35rem}
     .notif-card{border:1px solid #e5e7eb;border-radius:1rem;background:#fff;padding:1rem;box-shadow:0 1px 2px rgba(0,0,0,.04)}
     .notif-unread{border-left:5px solid #00CE7C;background:#f0fdf4}
@@ -111,7 +116,7 @@
   <div id="app-container" class="flex w-full h-full hidden">
     <aside class="w-64 bg-instVerdeOscuro text-white flex flex-col shadow-xl z-20 flex-shrink-0 hidden md:flex">
       <div class="p-6 border-b border-white/10 text-center"><div class="w-16 h-16 app-logo-box mx-auto mb-3"><img class="app-logo-img" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAMCAggICAcICAgIBwcICAgICAgICAgICAsICAcICAgICAgHCAgICAgICAgICAoICAgICQkJCAgODQsIDQgICgkBAwQEBgUGCgYGCg4NCg4NDg0OEA0QDQ8QDQsNDQ0NDQsNDg0ODQ0NDg0IDQoODQ0NDQ0NDQ0NDQ0ODQ0NDg0NDf/AABEIAGwAbAMBEQACEQEDEQH/xAAcAAEAAgMBAQEAAAAAAAAAAAAABgcEBQgDAgH/xAAzEAACAgECBAMGBAcBAAAAAAABAgADEQQSBQchMQgTQQYUIiMyYUJRUnEVY3KBgpGhYv/EABwBAQABBQEBAAAAAAAAAAAAAAAEAQMFBgcCCP/EADURAAIBAgQEBAQEBgMAAAAAAAABAgMRBAUSIQYxQVETYXGhIjKBsRRCcpEjUmKCssEHFRb/2gAMAwEAAhEDEQA/AJhNcPi8QBAEAQBAEAQBAEAQBAEAQBAEAQBAEAQBAEAQBAEAQBAEAQBAEAQBAEA+6qGYkKrMRgnapbAOcE7QcA4PUz0ot8kXadKdX5It97Juy7u3JHmrZ6jqIasWlufs8gQBAEAQBAEAQBAEAQBD5DkdU+GLjOiXh2zfTXqltubUh2RXIa1/Jc7iCyCjYob6RtI7gzNYeUdJ3ngjE4GGX6JygqqcnO9k3u9Ld97eHZX8rdDn3mfrNPZxHXPpNvur2g1FMbD8qsWsmOhV7vMcEdGByOhEx2Is5bHJM9qUamY1pYa3hNpxtyvpWp7d56n58yMSMYEQBAEAQBAEAQBAEA99BoHtdKqka21ztREUsxP2A9B3JPRRkkgDM9RTk7RL9CjUxE40qcXKT2sud+/ku7ey6l7+xnhOtsUPr7zp89fJ0+xrAPya2xWQHHcKjfZzMjDCrnJnVst4AnUipY2o4vtC10vNtNe23mTY+HrgFfw24Zv52qbd/YFlwf2Akjwqa6e5s64VyKl8NRpv+qW/u/sYnFfCtw65d2lvvpPpixb6ifTctgZsD/xYnfuZ5lhoPdbEWvwNl2IWrC1JR/S04v1um/2aKN5icntbw07rlFunzhdRUCU69vMU9aSSMfFlSSAHJOJAq0JR9DmGc8NYvK7zqLVT6SV7Lzkvy9Vdu3nuQiRtjVXzEoUEAQBAEAQBAPquskhQCzMVVVAySzHCqB6liQAB1JM9JXdke4QlNqMN22kl3bdkvqzrfl57GabgOgfWawj3koG1FmNxXdjGmpwMn4sKMAGx+p9AuYp0401ufQuUZbh+HsD+LxVvEteT6/ojtd9l1bI7o6uL+0HzfOfhPCjny1rJ861c4DblKs2QM7iwqyei3AB5Ra578kYqks14jl4mt4fC9Evnmukr9OnlzW63N1X4YeCVAC7fY7d3u1G1mPqcJsBJ9cCevCguf3Mh/wCPyakksQ9Uu85bvze6+xia3w0+7/N4Prr9DaOoQvupYjr12jOT2y4tTHdTkyvhW3gyxU4PdD+NlOInTl0V7wf07vvvbsbTl5zWe+2zhPF6Vp1+0rggGnUIQc4HVdxXJABKWKGI2kMiIVLvRPmTMpz6eInLLM0go17f21F3XTvt+3VKjuePKv8AhupVqgfctRk0k9dj9S1BPqAvxVkksyhv0FjAxFHT8S5HMeKsheV4lOmv4Mvl/plu9Ppbdej8ithIe3Q0VMSgEAQBAEAQCVcr+OabTa6jUatXamndYqou5jcMCroSvRcs+fRkTp6iTQlGMryNgyHE4XDY6GIxa+CKbS3+fbS9u2/PyfNItziftKntJxTQ6WsWLw7To2qvVxtLurBMHaTgEMtY+LO2y491BE1yVWWlckdGrY2HE2Z0cPSv+HgvEn5yTsk+Wz5W9fVb7xCc4X0QTQaIiq5qw1lqgZqq7JXWpBAewA/F+BR06lSK1q3h7IyXF/EM8visDhHpm1vJW+CN+STTV2vb6HLWrQWMz2fMsb6nsy7n+p33Mfy6mYzXJvdnCaspVZaqknJ95bv3uS3l3zN1XDLEahmNAPzNKW+Uy+oUEEVN6h6wvXvuGQb1KvKOz5Gw5Pn2KyytGdObdO9nBu6cfK99LXS1r9Swuc3Nnh3EaqnoGop4hp7FsouNajGGBKs249AQLF6H40HozAyqlaEldc0blxHxBgMyoxqUNUcRBqUHbqvyvblf6bdVs8vmFzy0XEeFnT213DW+Wjqdg8saqsZyGDZ2Mdyk4+hj0PaJVoThu9+xezfibA5nln4eqn42lNbPaqlzulyvf6bcihpi7WOSN36CAIAgCAIAgCAX14QQPetf+r3enH7ebZn/AF0mSwnudY/46t+KxHfRD/KZX/PVW/jHEt2c+bXtzn6PdaduPtj8vXP3kfEX17mpcV6/+3xCn/NG3poiQWRTVBAEAQBAEAQBAEAQBAEAmnJ724Xh3EKdQ+RQytTf36VWFTvI9fLZVY+u1Xx9UlYepokbRw1mkcux8KtR2g1pl6N7N/pe/krl5eIDk+2vFev0QFt61gPWpX5tX1I1bZ2mxMnAJw6nGchcza9HXujqXFvD0sxjHG4P4ppbpW+OPR37r1scs65TUxS0Glx3S0Gth+62BT/yYzRPscIq0p0ZOFWLjJc00197XRL+XnKzV8SsRaq2TTnHmal1IrVPUoWwLXI+lUz1xuKjvdpUHN7mxZRw/i8zqxVODjSvdzatt5X+a/S119ie87OV/C+F0ItTXvrbj8tHu3AICPMtdQo+HHwAdMswx2OJNalCnHzNr4myPK8qoJUtXjy+VOTfrJq/L6c2ik5jTl65CAIAgCAIAgCAIAgFncr+feq4copZfetGO1TNtsr+1LnI2fynG0fhKDIM2liHHZm95FxdiMtSo1FrpLkvzR9G3Zrsna3e1kXHT4m+D2qGtqvrf9NumFjD/Ko2p1+zn+3WTfHpvmzo1PjPKK8VKtCSfaUbv91qXuaT2q8WVKqyaDTOz4wtmoVa6R07rWjm18eqsKs9OvXM8TxMUvhMXj+P6EIuGCpNy6OVlH1snf2Vznjj3HrtVc9+osa65z8Tt+Q7KoHREX8KKABk+pJONnNzd2cexmMr4ys6+Ilqm/2S7JdEu3+7swJbIYlAIAgCAIAgCAIAgCAIVuqKbeYgq+YgCAIAgCAIAgCAIAgCAIAgCAIAgCAIAgCAIAgCAIAgCAIAgCAIAgCAIAgCAIAgCAIAgCAIAgCAIAgCAIB//9k=" alt="Logo Cordillera"></div><h1 class="text-xl font-bold tracking-wider uppercase">Gestión IT</h1><p class="text-xs text-white/60 mt-1">Supabase Edition</p></div>
-      <div class="p-4 flex items-center gap-3 bg-black/10"><div class="w-10 h-10 rounded-full bg-instVerdeClaro flex items-center justify-center text-lg font-bold"><i class="fa-solid fa-user"></i></div><div class="overflow-hidden"><p class="text-xs text-instVerdeClaro uppercase font-semibold">Agente Activo</p><p id="display-agent-name" class="font-medium truncate text-sm">Cargando...</p><p id="display-agent-role" class="text-xs text-white/60">agent</p></div></div>
+      <div class="p-4 flex items-center gap-3 bg-black/10"><div id="display-agent-avatar" class="w-10 h-10 rounded-full bg-instVerdeClaro flex items-center justify-center text-lg font-bold overflow-hidden"><i class="fa-solid fa-user"></i></div><div class="overflow-hidden"><p class="text-xs text-instVerdeClaro uppercase font-semibold">Agente Activo</p><p id="display-agent-name" class="font-medium truncate text-sm">Cargando...</p><p id="display-agent-role" class="text-xs text-white/60">agent</p></div></div>
       <button onclick="switchTab('tab-notificaciones')" class="mx-3 mt-3 mb-1 flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-left transition-colors"><span><i class="fa-solid fa-bell mr-2 text-instVerdeClaro"></i>Notificaciones</span><span id="notif-count" class="notification-dot hidden">0</span></button>
       <nav class="flex-1 py-4 space-y-1 px-3 overflow-y-auto">
         <button onclick="switchTab('tab-form')" id="btn-tab-form" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-instVerdeClaro text-instVerdeOscuro shadow-md font-semibold text-left"><i class="fa-solid fa-file-signature w-5 text-center"></i> Nuevo Ticket</button>
@@ -198,6 +203,17 @@
                 <input type="hidden" id="agent-edit-id">
                 <input type="text" id="agent-admin-name" class="field" placeholder="Nombre completo">
                 <input type="email" id="agent-admin-email" class="field" placeholder="Correo institucional" required>
+                <div class="bg-gray-50 border rounded-xl p-3">
+                  <label class="block text-xs font-semibold text-instVerdeOscuro uppercase mb-2">Fotografía del agente</label>
+                  <div class="flex items-center gap-3">
+                    <div id="agent-photo-preview" class="agent-photo-lg agent-photo-placeholder"><i class="fa-solid fa-user"></i></div>
+                    <div class="flex-1">
+                      <input type="file" id="agent-admin-photo" accept="image/png,image/jpeg,image/webp" class="hidden" onchange="previewAgentPhoto(event)">
+                      <label for="agent-admin-photo" class="btn btn-muted px-3 py-2 cursor-pointer text-sm"><i class="fa-solid fa-camera"></i> Seleccionar foto</label>
+                      <p class="text-[11px] text-gray-500 mt-2">Formato JPG, PNG o WEBP. Tamaño sugerido: 400x400 px.</p>
+                    </div>
+                  </div>
+                </div>
                 <select id="agent-admin-role" class="field">
                   <option value="agent">Agente básico</option>
                   <option value="advanced">Agente soporte avanzado</option>
@@ -230,7 +246,7 @@
                 <div><h3 class="font-semibold text-gray-700">Agentes registrados</h3><p class="text-xs text-instPlomo">Solo los administradores pueden modificar rol, estado y generar enlaces.</p></div>
                 <span id="agents-count" class="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full">0 agentes</span>
               </div>
-              <div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="bg-gray-50"><tr><th class="px-4 py-3">Nombre</th><th class="px-4 py-3">Correo</th><th class="px-4 py-3">Nivel</th><th class="px-4 py-3">Módulos</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3">Creado</th><th class="px-4 py-3 text-center">Acciones</th></tr></thead><tbody id="agents-table-body"></tbody></table></div>
+              <div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="bg-gray-50"><tr><th class="px-4 py-3">Foto</th><th class="px-4 py-3">Nombre</th><th class="px-4 py-3">Correo</th><th class="px-4 py-3">Nivel</th><th class="px-4 py-3">Módulos</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3">Creado</th><th class="px-4 py-3 text-center">Acciones</th></tr></thead><tbody id="agents-table-body"></tbody></table></div>
             </div>
           </div>
           <div id="agents-not-admin" class="hidden bg-white rounded-2xl shadow-sm border p-8 text-center">
@@ -437,6 +453,42 @@
     function nowEcuador(){ return formatDateTimeEcuador(new Date()); }
 
     const randomToken = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)+Date.now());
+    function initialsFromName(name){
+      const parts=String(name||'AG').trim().split(/\s+/).filter(Boolean).slice(0,2);
+      return (parts.map(p=>p[0]).join('') || 'AG').toUpperCase();
+    }
+    function agentAvatarHTML(name, url, cls='agent-photo-sm'){
+      if(url) return `<img src="${esc(url)}" alt="${esc(name||'Agente')}" class="${cls}">`;
+      return `<span class="${cls} agent-photo-placeholder text-[10px]">${esc(initialsFromName(name))}</span>`;
+    }
+    function findAgentByTicket(t){
+      return agentsData.find(a=>a.id===t.assigned_agent_id || a.id===t.agente_id) || agentsData.find(a=>(a.nombre_completo||a.email||'')===agentName(t));
+    }
+    function setElementAvatar(id, name, url){
+      const el=$(id); if(!el) return;
+      el.innerHTML = url ? `<img src="${esc(url)}" alt="${esc(name||'Agente')}" class="w-full h-full object-cover rounded-full">` : `<span>${esc(initialsFromName(name))}</span>`;
+    }
+    function previewAgentPhoto(event){
+      const file=event.target.files?.[0];
+      if(!file) return;
+      if(!/^image\/(png|jpeg|webp)$/.test(file.type)){ showToast('Selecciona una imagen JPG, PNG o WEBP','error'); event.target.value=''; return; }
+      if(file.size > 2*1024*1024){ showToast('La fotografía no debe superar 2 MB','error'); event.target.value=''; return; }
+      const reader=new FileReader();
+      reader.onload=()=>{ const el=$('agent-photo-preview'); if(el){ el.className='agent-photo-lg'; el.innerHTML=`<img src="${reader.result}" class="w-full h-full object-cover rounded-full" alt="Vista previa">`; } };
+      reader.readAsDataURL(file);
+    }
+    async function uploadAgentPhoto(agentId){
+      const input=$('agent-admin-photo');
+      const file=input?.files?.[0];
+      if(!file) return null;
+      if(!agentId) throw new Error('Primero selecciona o guarda el perfil del agente.');
+      const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'') || 'jpg';
+      const path=`${currentUser.id}/${agentId}-${Date.now()}.${ext}`;
+      const {error}=await sbClient.storage.from('agent-avatars').upload(path,file,{cacheControl:'3600',upsert:false,contentType:file.type});
+      if(error) throw new Error('No se pudo subir la fotografía: '+error.message);
+      const {data}=sbClient.storage.from('agent-avatars').getPublicUrl(path);
+      return data?.publicUrl || null;
+    }
     const appBaseUrl = () => window.location.href.split('#')[0].split('?')[0];
     const isAdmin = () => currentProfile?.rol === 'admin' && currentProfile?.activo !== false;
     const MODULE_PERMISSIONS = [
@@ -539,7 +591,7 @@
     }
     function showApp(){
       $('auth-overlay').classList.add('hidden'); $('auth-overlay').classList.remove('flex'); $('app-container').classList.remove('hidden');
-      $('display-agent-name').textContent=currentProfile?.nombre_completo||currentUser.email; $('display-agent-role').textContent=roleLabels[normalizeRole(currentProfile?.rol)]||'Agente básico';
+      $('display-agent-name').textContent=currentProfile?.nombre_completo||currentUser.email; $('display-agent-role').textContent=roleLabels[normalizeRole(currentProfile?.rol)]||'Agente básico'; setElementAvatar('display-agent-avatar', currentProfile?.nombre_completo||currentUser.email, currentProfile?.foto_url);
       applyRoleAccess();
       const admin = isAdmin();
       if($('agents-admin-panel')) $('agents-admin-panel').classList.toggle('hidden', !admin);
@@ -690,7 +742,7 @@
       tbody.innerHTML=filtered.map(t=>{
         const rating=t.valoracion_calificacion?`<div>${[1,2,3,4,5].map(i=>`<i class="fa-solid fa-star ${i<=t.valoracion_calificacion?'text-yellow-400':'text-gray-200'}"></i>`).join('')}</div>`:'<span class="text-xs text-gray-400 italic">Pendiente</span>';
         const tiempo=t.estado==='Resuelto'?formatMinutes(ticketResolutionMinutes(t)):'<span class="text-xs text-gray-400 italic">En proceso</span>';
-        return `<tr class="hover:bg-gray-50"><td><div class="ticket-main">${esc(t.id_str)}</div><div class="ticket-sub">${esc(formatDateEcuador(t.created_at))}</div></td><td title="${esc(t.usuario_nombre||'')}"><div class="ticket-user">${esc(t.usuario_nombre)}</div><div class="ticket-sub"><i class="fa-solid fa-headset mr-1"></i>${esc(t.agente_nombre)}</div></td><td title="${esc(t.asunto||'')}"><div class="ticket-title">${esc(t.asunto)}</div><div class="ticket-muted">${esc(t.categoria)}</div></td><td><span class="ticket-badge px-2 py-1 rounded-full text-xs font-semibold border ${statusBadge(t)}">${esc(t.estado)}</span><div class="ticket-sub">${esc(t.prioridad||'')}</div></td><td title="${esc(agentName(t))}"><div class="font-semibold text-instVerdeOscuro"><i class="fa-solid fa-user mr-1"></i>${esc(agentName(t))}</div><div class="ticket-sub">${esc(formatDateTimeEcuador(t.assigned_at||t.created_at))}</div></td><td><div class="font-semibold">${tiempo}</div>${t.resolved_at?`<div class="ticket-sub">${esc(formatDateTimeEcuador(t.resolved_at))}</div>`:''}</td><td class="text-center"><div class="ticket-stars">${rating}</div></td><td class="text-center"><div class="ticket-actions">${t.estado==='Resuelto'?`<button onclick="abrirModalLink('${t.id}')" class="text-yellow-500 hover:bg-yellow-50 rounded" title="Solicitar valoración"><i class="fa-solid fa-star"></i></button>`:''}<button onclick="abrirModalEditarTicket('${t.id}')" class="text-blue-600 hover:bg-blue-50 rounded" title="Editar ticket"><i class="fa-solid fa-pen"></i></button><button onclick="abrirModalTransferirTicket('${t.id}')" class="text-purple-600 hover:bg-purple-50 rounded" title="Transferir"><i class="fa-solid fa-right-left"></i></button><button onclick="abrirModalHistorialTicket('${t.id}')" class="text-instVerdeOscuro hover:bg-green-50 rounded" title="Historial"><i class="fa-solid fa-clock-rotate-left"></i></button><button onclick="eliminarTicket('${t.id}')" class="text-instTomate hover:bg-red-50 rounded" title="Eliminar"><i class="fa-solid fa-trash"></i></button></div></td></tr>`
+        return `<tr class="hover:bg-gray-50"><td><div class="ticket-main">${esc(t.id_str)}</div><div class="ticket-sub">${esc(formatDateEcuador(t.created_at))}</div></td><td title="${esc(t.usuario_nombre||'')}"><div class="ticket-user">${esc(t.usuario_nombre)}</div><div class="ticket-sub"><i class="fa-solid fa-headset mr-1"></i>${esc(t.agente_nombre)}</div></td><td title="${esc(t.asunto||'')}"><div class="ticket-title">${esc(t.asunto)}</div><div class="ticket-muted">${esc(t.categoria)}</div></td><td><span class="ticket-badge px-2 py-1 rounded-full text-xs font-semibold border ${statusBadge(t)}">${esc(t.estado)}</span><div class="ticket-sub">${esc(t.prioridad||'')}</div></td><td title="${esc(agentName(t))}"><div class="flex items-center gap-2">${agentAvatarHTML(agentName(t), findAgentByTicket(t)?.foto_url, 'agent-photo-sm')}<div><div class="font-semibold text-instVerdeOscuro">${esc(agentName(t))}</div><div class="ticket-sub">${esc(formatDateTimeEcuador(t.assigned_at||t.created_at))}</div></div></div></td><td><div class="font-semibold">${tiempo}</div>${t.resolved_at?`<div class="ticket-sub">${esc(formatDateTimeEcuador(t.resolved_at))}</div>`:''}</td><td class="text-center"><div class="ticket-stars">${rating}</div></td><td class="text-center"><div class="ticket-actions">${t.estado==='Resuelto'?`<button onclick="abrirModalLink('${t.id}')" class="text-yellow-500 hover:bg-yellow-50 rounded" title="Solicitar valoración"><i class="fa-solid fa-star"></i></button>`:''}<button onclick="abrirModalEditarTicket('${t.id}')" class="text-blue-600 hover:bg-blue-50 rounded" title="Editar ticket"><i class="fa-solid fa-pen"></i></button><button onclick="abrirModalTransferirTicket('${t.id}')" class="text-purple-600 hover:bg-purple-50 rounded" title="Transferir"><i class="fa-solid fa-right-left"></i></button><button onclick="abrirModalHistorialTicket('${t.id}')" class="text-instVerdeOscuro hover:bg-green-50 rounded" title="Historial"><i class="fa-solid fa-clock-rotate-left"></i></button><button onclick="eliminarTicket('${t.id}')" class="text-instTomate hover:bg-red-50 rounded" title="Eliminar"><i class="fa-solid fa-trash"></i></button></div></td></tr>`
       }).join('');
     }
     async function eliminarTicket(id){ if(!confirm('¿Eliminar este ticket?'))return; const {error}=await sbClient.from('tickets').delete().eq('id',id); if(error)return showToast(error.message,'error'); showToast('Ticket eliminado'); await loadTickets(); renderTickets(); }
@@ -789,7 +841,7 @@
       $('modal-historial-ticket').classList.add('flex');
       const {data,error}=await sbClient.from('ticket_seguimientos').select('*').eq('ticket_id',id).order('created_at',{ascending:true});
       if(error){$('historial-ticket-body').innerHTML=`<div class="bg-red-50 text-red-700 border border-red-200 rounded-xl p-4 text-sm">${esc(error.message)}</div>`;return;}
-      const base=`<div class="bg-gray-50 border rounded-xl p-4 text-sm"><div class="grid grid-cols-1 md:grid-cols-3 gap-3"><div><b>Creado:</b><br>${esc(formatDateTimeEcuador(t.created_at))}</div><div><b>Asignado:</b><br>${esc(agentName(t))}</div><div><b>Tiempo:</b><br>${esc(t.estado==='Resuelto'?formatMinutes(ticketResolutionMinutes(t)):'En proceso')}</div></div></div>`;
+      const base=`<div class="bg-gray-50 border rounded-xl p-4 text-sm"><div class="grid grid-cols-1 md:grid-cols-3 gap-3"><div><b>Creado:</b><br>${esc(formatDateTimeEcuador(t.created_at))}</div><div><b>Asignado:</b><br><span class="inline-flex items-center gap-2 mt-1">${agentAvatarHTML(agentName(t), findAgentByTicket(t)?.foto_url, 'agent-photo-sm')}${esc(agentName(t))}</span></div><div><b>Tiempo:</b><br>${esc(t.estado==='Resuelto'?formatMinutes(ticketResolutionMinutes(t)):'En proceso')}</div></div></div>`;
       const items=(data||[]).map((h,i)=>`<div class="relative pl-8 pb-4 border-l-2 ${i===0?'border-instVerdeClaro':'border-gray-200'}"><span class="absolute -left-2 top-0 w-4 h-4 rounded-full ${h.accion==='Transferencia'?'bg-blue-500':h.accion==='Cambio de estado'?'bg-orange-500':'bg-instVerdeClaro'}"></span><div class="bg-white border rounded-xl p-4 shadow-sm"><div class="flex flex-col sm:flex-row sm:justify-between gap-1"><b class="text-instVerdeOscuro">${esc(h.accion)}</b><span class="text-xs text-gray-500">${esc(formatDateTimeEcuador(h.created_at))}</span></div><p class="text-xs text-gray-500 mt-1">Por ${esc(h.created_by_nombre||h.agente_origen_nombre||'Sistema')}</p>${h.estado_anterior||h.estado_nuevo?`<p class="text-sm mt-2"><b>Estado:</b> ${esc(h.estado_anterior||'-')} -> ${esc(h.estado_nuevo||'-')}</p>`:''}${h.agente_destino_nombre?`<p class="text-sm"><b>Destino:</b> ${esc(h.agente_destino_nombre)}</p>`:''}${h.comentario?`<div class="mt-2 bg-gray-50 rounded-lg p-3 text-sm">${esc(h.comentario)}</div>`:''}</div></div>`).join('');
       $('historial-ticket-body').innerHTML=base+(items||'<div class="text-center py-8 text-gray-500">Aún no hay seguimientos registrados.</div>');
     }
@@ -925,7 +977,7 @@
         const estado=a.activo?'<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">Activo</span>':'<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">Inactivo</span>';
         const modules=permissionsSummary(a.permisos, role);
         const actions=admin?`<div class="flex justify-center gap-1"><button onclick="editAgent('${a.id}')" class="text-blue-600 hover:bg-blue-50 p-2 rounded" title="Editar"><i class="fa-solid fa-pen"></i></button><button onclick="generateSecureInvitationForAgent('${a.id}')" class="text-green-600 hover:bg-green-50 p-2 rounded" title="Generar invitación"><i class="fa-solid fa-envelope-circle-check"></i></button><button onclick="toggleAgentActive('${a.id}')" class="text-orange-600 hover:bg-orange-50 p-2 rounded" title="Activar/Inactivar"><i class="fa-solid fa-toggle-on"></i></button><button onclick="softDeleteAgent('${a.id}')" class="text-red-600 hover:bg-red-50 p-2 rounded" title="Eliminar lógico"><i class="fa-solid fa-trash"></i></button></div>`:'<span class="text-xs text-gray-400">Sin permisos</span>';
-        return `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3 font-medium">${esc(a.nombre_completo)}</td><td class="px-4 py-3">${esc(a.email)}</td><td class="px-4 py-3"><span class="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">${esc(roleLabel)}</span></td><td class="px-4 py-3 text-xs text-gray-600 max-w-xs" title="${esc(modules)}">${esc(modules)}</td><td class="px-4 py-3">${estado}</td><td class="px-4 py-3 text-gray-500">${esc(formatDateEcuador(a.created_at))}</td><td class="px-4 py-3 text-center">${actions}</td></tr>`;
+        return `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3">${agentAvatarHTML(a.nombre_completo||a.email,a.foto_url,'agent-photo-sm')}</td><td class="px-4 py-3 font-medium">${esc(a.nombre_completo)}</td><td class="px-4 py-3">${esc(a.email)}</td><td class="px-4 py-3"><span class="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">${esc(roleLabel)}</span></td><td class="px-4 py-3 text-xs text-gray-600 max-w-xs" title="${esc(modules)}">${esc(modules)}</td><td class="px-4 py-3">${estado}</td><td class="px-4 py-3 text-gray-500">${esc(formatDateEcuador(a.created_at))}</td><td class="px-4 py-3 text-center">${actions}</td></tr>`;
       }).join('');
       renderPermissionsGrid($('agent-admin-role')?.value || 'agent');
     }
@@ -936,6 +988,12 @@
       $('agent-admin-email').value = agent?.email || '';
       $('agent-admin-role').value = role;
       $('agent-admin-active').checked = agent?.activo !== false;
+      if($('agent-admin-photo')) $('agent-admin-photo').value='';
+      const photoEl=$('agent-photo-preview');
+      if(photoEl){
+        if(agent?.foto_url){ photoEl.className='agent-photo-lg'; photoEl.innerHTML=`<img src="${esc(agent.foto_url)}" class="w-full h-full object-cover rounded-full" alt="Foto del agente">`; }
+        else { photoEl.className='agent-photo-lg agent-photo-placeholder'; photoEl.innerHTML='<i class="fa-solid fa-user"></i>'; }
+      }
       renderPermissionsGrid(role, normalizePermissions(role, agent?.permisos));
     }
     function clearAgentAdminForm(){ fillAgentAdminForm(null); $('agent-link-box').classList.add('hidden'); }
@@ -947,9 +1005,13 @@
       if(!id) { await generateSecureInvitation(); return; }
       const role=normalizeRole($('agent-admin-role').value);
       const payload={nombre_completo:$('agent-admin-name').value.trim()||$('agent-admin-email').value.trim(), email:$('agent-admin-email').value.trim(), rol:role, permisos:getAgentFormPermissions(), activo:$('agent-admin-active').checked};
+      try{
+        const photoUrl=await uploadAgentPhoto(id);
+        if(photoUrl) payload.foto_url=photoUrl;
+      }catch(photoError){ return showToast(photoError.message,'error'); }
       const {error}=await sbClient.from('agentes').update(payload).eq('id',id);
       if(error) return showToast(error.message,'error');
-      showToast('Perfil y permisos del agente actualizados'); await loadAgents(); renderAgents(); if(id===currentProfile?.id){ await loadProfile(); applyRoleAccess(); }
+      showToast('Perfil, permisos y fotografía del agente actualizados'); await loadAgents(); renderAgents(); if(id===currentProfile?.id){ await loadProfile(); setElementAvatar('display-agent-avatar', currentProfile?.nombre_completo||currentUser.email, currentProfile?.foto_url); applyRoleAccess(); }
     }
     async function toggleAgentActive(id){
       if(!isAdmin()) return showToast('Solo administradores pueden modificar agentes','error');
@@ -989,7 +1051,7 @@
       try{await navigator.clipboard.writeText(url)}catch(e){$('agent-login-url').select();document.execCommand('copy')}
       if(show!==false) showToast('URL copiada');
     }
-    window.editAgent=editAgent; window.toggleAgentActive=toggleAgentActive; window.softDeleteAgent=softDeleteAgent; window.clearAgentAdminForm=clearAgentAdminForm; window.generateAgentLoginLink=generateAgentLoginLink; window.generateSecureInvitation=generateSecureInvitation; window.generateSecureInvitationForAgent=generateSecureInvitationForAgent; window.renderInvitations=renderInvitations; window.loadInvitations=loadInvitations; window.copyText=copyText; window.copyAgentLoginLink=copyAgentLoginLink; window.applyRolePresetToForm=applyRolePresetToForm; if($('agent-admin-form')) $('agent-admin-form').onsubmit=updateAgentFromForm; if($('agent-admin-role')) $('agent-admin-role').onchange=applyRolePresetToForm; if($('btn-apply-role-preset')) $('btn-apply-role-preset').onclick=applyRolePresetToForm;
+    window.previewAgentPhoto=previewAgentPhoto; window.editAgent=editAgent; window.toggleAgentActive=toggleAgentActive; window.softDeleteAgent=softDeleteAgent; window.clearAgentAdminForm=clearAgentAdminForm; window.generateAgentLoginLink=generateAgentLoginLink; window.generateSecureInvitation=generateSecureInvitation; window.generateSecureInvitationForAgent=generateSecureInvitationForAgent; window.renderInvitations=renderInvitations; window.loadInvitations=loadInvitations; window.copyText=copyText; window.copyAgentLoginLink=copyAgentLoginLink; window.applyRolePresetToForm=applyRolePresetToForm; if($('agent-admin-form')) $('agent-admin-form').onsubmit=updateAgentFromForm; if($('agent-admin-role')) $('agent-admin-role').onchange=applyRolePresetToForm; if($('btn-apply-role-preset')) $('btn-apply-role-preset').onclick=applyRolePresetToForm;
 
 
     function parseCSV(text){ const rows=[]; let row=[],cell='',q=false; for(let i=0;i<text.length;i++){const ch=text[i],nx=text[i+1]; if(ch==='"'&&q&&nx==='"'){cell+='"';i++;continue} if(ch==='"'){q=!q;continue} if(ch===','&&!q){row.push(cell);cell='';continue} if((ch==='\n'||ch==='\r')&&!q){ if(ch==='\r'&&nx==='\n')i++; row.push(cell); if(row.some(x=>x.trim()!==''))rows.push(row); row=[]; cell=''; continue } cell+=ch; } row.push(cell); if(row.some(x=>x.trim()!==''))rows.push(row); return rows; }
