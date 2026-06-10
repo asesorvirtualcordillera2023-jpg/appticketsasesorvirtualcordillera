@@ -1064,7 +1064,65 @@
       let count=0; for(let i=0;i<payload.length;i+=300){const {error}=await sbClient.from('tickets').upsert(payload.slice(i,i+300),{onConflict:'id_str'}); if(error){showToast(error.message,'error');break} count+=payload.slice(i,i+300).length} showToast(`Importados/actualizados ${count} tickets`); await loadTickets(); renderTickets(); populateDashboardFilters(); renderDashboard(); event.target.value=''; }
     window.handleTicketsCSVUpload=handleTicketsCSVUpload;
     function exportarCSV(){ if(!ticketsData.length)return showToast('No hay datos','error'); const header=['ID','Fecha','Agente','Cedula_Usuario','Nombre_Usuario','Asunto','Categoria','Subcategoria','Prioridad','Canal','Estado','Valoracion_Estrellas','Comentario_Valoracion']; const rows=ticketsData.map(t=>[t.id_str,formatDateTimeEcuador(t.created_at)||t.fecha_texto,t.agente_nombre,t.usuario_cedula,t.usuario_nombre,t.asunto,t.categoria,t.subcategoria,t.prioridad,t.canal,t.estado,t.valoracion_calificacion||'',t.valoracion_comentario||'']); download('tickets.csv','\ufeff'+[header,...rows].map(r=>r.map(csvCell).join(',')).join('\n'),'text/csv;charset=utf-8'); }
-    function exportarHTML(){ if(!ticketsData.length)return showToast('No hay datos','error'); const rows=ticketsData.map(t=>`<tr><td>${esc(t.id_str)}</td><td>${esc(formatDateTimeEcuador(t.created_at)||t.fecha_texto)}</td><td>${esc(t.usuario_nombre)}</td><td>${esc(t.asunto)}</td><td>${esc(t.estado)}</td><td>${esc(t.valoracion_calificacion||'N/A')}</td><td>${esc(t.agente_nombre)}</td></tr>`).join(''); download('tickets.html',`<html><head><meta charset="UTF-8"><title>Tickets</title><style>table{width:100%;border-collapse:collapse;font-family:sans-serif}th,td{border:1px solid #ddd;padding:8px}th{background:#006068;color:white}</style></head><body><h2>Tickets</h2><table><tr><th>ID</th><th>Fecha</th><th>Usuario</th><th>Asunto</th><th>Estado</th><th>Valoración</th><th>Agente</th></tr>${rows}</table></body></html>`,'text/html'); }
+    function exportarHTML(){
+      if(!ticketsData.length)return showToast('No hay datos','error');
+      const columns = [
+        ['id','ID interno'],
+        ['id_str','Código ticket'],
+        ['created_at','Fecha creación'],
+        ['fecha_texto','Fecha texto'],
+        ['usuario_id','ID usuario'],
+        ['usuario_cedula','Cédula usuario'],
+        ['usuario_nombre','Nombre usuario'],
+        ['agente_id','ID agente creador'],
+        ['agente_nombre','Agente creador'],
+        ['assigned_agent_id','ID agente asignado'],
+        ['assigned_agent_name','Agente asignado'],
+        ['assigned_at','Fecha asignación'],
+        ['asunto','Asunto'],
+        ['categoria','Categoría'],
+        ['subcategoria','Subcategoría'],
+        ['prioridad','Prioridad'],
+        ['canal','Canal'],
+        ['descripcion','Descripción'],
+        ['estado','Estado'],
+        ['last_status_change_at','Último cambio estado'],
+        ['resolved_at','Fecha resolución'],
+        ['resolution_minutes','Tiempo resolución minutos'],
+        ['rating_token','Token valoración'],
+        ['rating_token_expires_at','Expira token valoración'],
+        ['valoracion_calificacion','Valoración estrellas'],
+        ['valoracion_comentario','Comentario valoración'],
+        ['valoracion_fecha','Fecha valoración'],
+        ['sla_deadline','Fecha límite SLA'],
+        ['sla_incumplido','SLA incumplido']
+      ];
+      const existingExtraKeys = Array.from(new Set(ticketsData.flatMap(t => Object.keys(t || {}))))
+        .filter(k => !columns.some(([key]) => key === k))
+        .sort();
+      const finalColumns = columns.concat(existingExtraKeys.map(k => [k, k]));
+      const printable = (t, key) => {
+        const v = t?.[key];
+        if(['created_at','assigned_at','resolved_at','valoracion_fecha','rating_token_expires_at','last_status_change_at','sla_deadline'].includes(key)) return v ? formatDateTimeEcuador(v) : '';
+        if(key === 'resolution_minutes') return v === null || v === undefined || v === '' ? '' : String(v);
+        if(typeof v === 'boolean') return v ? 'Sí' : 'No';
+        if(v && typeof v === 'object') return JSON.stringify(v);
+        return v ?? '';
+      };
+      const escReport = v => String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+      const total=ticketsData.length;
+      const resueltos=ticketsData.filter(t=>t.estado==='Resuelto').length;
+      const cancelados=ticketsData.filter(t=>t.estado==='Cancelado').length;
+      const seguimiento=ticketsData.filter(t=>!['Resuelto','Cancelado'].includes(t.estado)).length;
+      const valorados=ticketsData.filter(t=>Number(t.valoracion_calificacion)>0);
+      const promedio=valorados.length ? (valorados.reduce((a,t)=>a+Number(t.valoracion_calificacion||0),0)/valorados.length).toFixed(2) : '0.00';
+      const rows=ticketsData.map(t=>`<tr>${finalColumns.map(([key])=>`<td>${escReport(printable(t,key))}</td>`).join('')}</tr>`).join('');
+      const headers=finalColumns.map(([,label])=>`<th>${escReport(label)}</th>`).join('');
+      const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Reporte HTML Completo de Tickets</title><style>
+        body{font-family:Arial,Helvetica,sans-serif;margin:24px;color:#333;background:#fff}h1{color:#006068;margin-bottom:4px}.meta{color:#666;font-size:12px;margin-bottom:18px}.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:18px 0}.kpi{border:1px solid #ddd;border-left:5px solid #00CE7C;border-radius:10px;padding:10px;background:#fafafa}.kpi b{display:block;color:#006068;font-size:12px}.kpi span{font-size:20px;font-weight:700}.wrap{overflow:auto;border:1px solid #ddd;border-radius:10px}table{width:max-content;min-width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #ddd;padding:6px;vertical-align:top;max-width:260px;white-space:normal;word-break:break-word}th{background:#006068;color:white;position:sticky;top:0}tr:nth-child(even){background:#f8fafc}.small{font-size:11px;color:#666;margin-top:12px}@media print{body{margin:10mm}.wrap{overflow:visible}table{font-size:9px}th{position:static}.kpis{grid-template-columns:repeat(5,1fr)}}
+      </style></head><body><h1>Reporte HTML completo de tickets</h1><div class="meta">Generado: ${escReport(nowEcuador())} | Total de campos exportados: ${finalColumns.length}</div><div class="kpis"><div class="kpi"><b>Total tickets</b><span>${total}</span></div><div class="kpi"><b>Resueltos</b><span>${resueltos}</span></div><div class="kpi"><b>Seguimiento</b><span>${seguimiento}</span></div><div class="kpi"><b>Cancelados</b><span>${cancelados}</span></div><div class="kpi"><b>Valoración promedio</b><span>${promedio}</span></div></div><div class="wrap"><table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table></div><p class="small">Este reporte incluye todos los campos conocidos del registro de tickets, más cualquier campo adicional presente en la consulta actual.</p></body></html>`;
+      download('reporte_tickets_completo.html',html,'text/html');
+    }
     function exportarPDF(){ if(!ticketsData.length)return showToast('No hay datos','error'); $('pdf-table').innerHTML=`<thead><tr class="bg-gray-200"><th class="border p-2">ID</th><th class="border p-2">Fecha</th><th class="border p-2">Usuario</th><th class="border p-2">Asunto</th><th class="border p-2">Estrellas</th><th class="border p-2">Estado</th></tr></thead><tbody>`+ticketsData.map(t=>`<tr><td class="border p-2">${esc(t.id_str)}</td><td class="border p-2">${esc(formatDateEcuador(t.created_at))}</td><td class="border p-2">${esc(t.usuario_nombre)}</td><td class="border p-2">${esc(t.asunto)}</td><td class="border p-2 text-center">${esc(t.valoracion_calificacion||'-')}</td><td class="border p-2">${esc(t.estado)}</td></tr>`).join('')+'</tbody>'; const el=$('pdf-container');el.classList.remove('hidden');html2pdf().set({margin:10,filename:'tickets.pdf',jsPDF:{orientation:'landscape'}}).from(el).save().then(()=>el.classList.add('hidden')); }
     window.exportarCSV=exportarCSV; window.exportarHTML=exportarHTML; window.exportarPDF=exportarPDF;
 
