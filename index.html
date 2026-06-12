@@ -1142,17 +1142,46 @@
       </style></head><body><h1>Reporte HTML completo de tickets</h1><div class="meta">Generado: ${escReport(nowEcuador())} | Total de campos exportados: ${finalColumns.length}</div><div class="kpis"><div class="kpi"><b>Total tickets</b><span>${total}</span></div><div class="kpi"><b>Resueltos</b><span>${resueltos}</span></div><div class="kpi"><b>Seguimiento</b><span>${seguimiento}</span></div><div class="kpi"><b>Cancelados</b><span>${cancelados}</span></div><div class="kpi"><b>Valoración promedio</b><span>${promedio}</span></div></div><div class="wrap"><table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table></div><p class="small">Este reporte incluye todos los campos conocidos del registro de tickets, más cualquier campo adicional presente en la consulta actual.</p></body></html>`;
       download('reporte_tickets_completo.html',html,'text/html');
     }
-    function recurrentCaseKey(t){
-      const raw = norm(t.subcategoria) || norm(t.asunto) || norm(t.categoria) || 'Caso sin clasificar';
-      return raw.toLowerCase()
+    function normalizeCaseText(value){
+      return String(value || '').toLowerCase()
         .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
         .replace(/[^a-z0-9ñ\s]/gi,' ')
         .replace(/\s+/g,' ')
         .trim();
     }
-    function recurrentCaseLabel(t){
-      return norm(t.subcategoria) || norm(t.asunto) || norm(t.categoria) || 'Caso sin clasificar';
+    function ticketCaseText(t){
+      return [t.asunto,t.subcategoria,t.categoria,t.descripcion,t.canal].map(v=>norm(v)).filter(Boolean).join(' ');
     }
+    function recurrentCaseGroup(t){
+      const text = normalizeCaseText(ticketCaseText(t));
+      const categoria = norm(t.categoria) || 'Caso sin clasificar';
+      const sub = norm(t.subcategoria);
+      const asunto = norm(t.asunto);
+      const raw = sub || asunto || categoria || 'Caso sin clasificar';
+      const rules = [
+        {key:'seb_instalacion_uso', label:'Error en instalación, configuración o uso de SEB', words:['seb','safe exam','examen seguro']},
+        {key:'acceso_examen_seguro', label:'Problemas para ingresar al examen seguro', words:['ingresar al examen','acceso examen','evaluacion segura','evaluacion','examen']},
+        {key:'moodle_acceso_credenciales', label:'Contraseña incorrecta o problemas de acceso a Moodle', words:['moodle contrasena','moodle contraseña','moodle acceso','clave moodle','credencial','credenciales','usuario bloqueado','bloqueado','contrasena','contraseña']},
+        {key:'moodle_cuestionarios', label:'Problemas con cuestionarios o banco de preguntas en Moodle', words:['cuestionario','banco de preguntas','intentos','tiempo limite','calificacion moodle']},
+        {key:'moodle_tareas_archivos', label:'Dificultad para subir tareas o archivos en aula virtual', words:['subir tarea','tarea','archivo','adjuntar','peso maximo','entrega']},
+        {key:'teams_office365', label:'Problemas con Teams u Office 365', words:['teams','office 365','office365','onedrive','correo institucional','outlook']},
+        {key:'llamadas_sin_evidencia', label:'Incidentes atendidos por llamada sin evidencia suficiente', words:['llamada','telefono','telefónico','telefonico']},
+        {key:'migracion_moodle', label:'Solicitud de migración o copia de contenidos en Moodle', words:['migracion','migración','copia de contenido','copiar contenido','contenido moodle','restaurar curso']},
+        {key:'videos_grabaciones', label:'Problemas con edición, carga o grabación de videos', words:['video','grabacion','grabación','camara','cámara','microfono','micrófono']},
+        {key:'categorias_canales_inconsistentes', label:'Categorías o canales registrados de forma diferente', words:['categoria','categoría','canal','subcategoria','subcategoría']},
+        {key:'seguimiento_no_cerrado', label:'Casos que requieren seguimiento y no se cierran a tiempo', words:['seguimiento','pendiente','cierre','no se cierra','sin cerrar']},
+        {key:'instalacion_software', label:'Problemas de instalación de software o herramientas académicas', words:['instalacion','instalación','instalar','software','programa','aplicacion','aplicación']},
+        {key:'soporte_equipo', label:'Soporte técnico de computador o equipo institucional', words:['computador','pc','equipo','congelado','lento','pantalla','teclado','mouse','internet','wifi','red']}
+      ];
+      for(const rule of rules){
+        if(rule.words.some(w => text.includes(normalizeCaseText(w)))) return {key:rule.key,label:rule.label};
+      }
+      const clean = normalizeCaseText(raw);
+      const shortKey = clean.split(' ').filter(w=>w.length>2).slice(0,6).join(' ') || clean || 'caso_sin_clasificar';
+      return {key:'otro_'+shortKey,label:raw};
+    }
+    function recurrentCaseKey(t){ return recurrentCaseGroup(t).key; }
+    function recurrentCaseLabel(t){ return recurrentCaseGroup(t).label; }
     function detectUserTypeForTicket(t){
       const byCedula = directorioData.find(u => norm(u.cedula) && norm(u.cedula) === norm(t.usuario_cedula));
       return norm(t.usuario_tipo) || norm(byCedula?.tipo) || 'Estudiante / Docente';
@@ -1175,39 +1204,56 @@
       if(userType && String(userType).toLowerCase().includes('docente')) return 'Preparar una guía operativa para docentes y socializarla antes de los periodos de mayor demanda académica.';
       return 'Documentar el procedimiento de solución, publicar una guía breve para usuarios y revisar preventivamente los casos similares para disminuir reincidencias.';
     }
-    function buildCasosRecurrentesData(){
+    function solutionByCategory(categoria, userType){
+      const v = normalizeCaseText(categoria);
+      if(v.includes('seb') || v.includes('safe exam') || v.includes('examen seguro')) return 'Consolidar una guía institucional de instalación, configuración y uso de SEB/examen seguro, con requisitos mínimos, enlaces oficiales y pasos de verificación antes de evaluaciones.';
+      if(v.includes('moodle') || v.includes('aula virtual') || v.includes('eva')) return 'Crear una base de conocimiento por categoría Moodle/aula virtual con guías para acceso, recuperación de contraseña, tareas, cuestionarios y validación previa a evaluaciones.';
+      if(v.includes('credencial') || v.includes('acceso') || v.includes('contrasena') || v.includes('contraseña')) return 'Implementar revisión preventiva de credenciales activas, instructivo de recuperación de contraseña y canal prioritario de accesos en semanas críticas.';
+      if(v.includes('teams') || v.includes('office') || v.includes('365') || v.includes('correo')) return 'Publicar una guía institucional para ingreso a Teams, Office 365 y correo institucional, incluyendo recuperación de acceso y solución de errores comunes.';
+      if(v.includes('soporte') || v.includes('tecnico') || v.includes('técnico') || v.includes('equipo') || v.includes('computador')) return 'Estandarizar un procedimiento de diagnóstico inicial, checklist de atención y registro de evidencia para reducir reincidencia en soporte técnico.';
+      if(v.includes('red') || v.includes('internet') || v.includes('wifi')) return 'Levantar un registro preventivo de incidencias de conectividad por zona/equipo y definir escalamiento técnico cuando se repitan cortes o lentitud.';
+      if(v.includes('video') || v.includes('grabacion') || v.includes('grabación')) return 'Generar una guía para grabar, comprimir, subir y compartir videos, recomendando formatos compatibles y herramientas institucionales.';
+      if(v.includes('seguimiento') || v.includes('pendiente')) return 'Configurar alertas de seguimiento, responsable asignado y fecha máxima de cierre para evitar acumulación de casos abiertos.';
+      if(userType && String(userType).toLowerCase().includes('docente')) return 'Preparar una guía operativa específica para docentes y socializarla antes de los periodos de mayor demanda académica.';
+      return 'Documentar una solución estándar para esta categoría, publicar una guía breve para usuarios y revisar preventivamente los casos similares para disminuir reincidencias.';
+    }
+    function buildCasosRecurrentesData(compactMode=false){
       const map = new Map();
       ticketsData.forEach(t => {
-        const key = recurrentCaseKey(t);
-        if(!key) return;
-        if(!map.has(key)) map.set(key, {descripcion: recurrentCaseLabel(t), usuarios: {}, cantidad: 0, sample: t});
+        const categoria = norm(t.categoria) || 'Sin categoría';
+        const key = normalizeCaseText(categoria) || 'sin_categoria';
+        if(!map.has(key)) map.set(key, {categoria, usuarios: {}, cantidad: 0, asuntos: {}, sample: t});
         const item = map.get(key);
         item.cantidad += 1;
         const tipo = detectUserTypeForTicket(t);
         item.usuarios[tipo] = (item.usuarios[tipo] || 0) + 1;
-        if((norm(t.asunto).length || 0) > norm(item.descripcion).length) item.descripcion = recurrentCaseLabel(t);
+        const asunto = norm(t.asunto) || norm(t.subcategoria) || categoria;
+        if(asunto) item.asuntos[asunto] = (item.asuntos[asunto] || 0) + 1;
       });
       return Array.from(map.values())
         .map(item => {
           const usuario = Object.entries(item.usuarios).sort((a,b)=>b[1]-a[1]).map(([u])=>u).slice(0,2).join(' / ') || 'Estudiante / Docente';
+          const principales = Object.entries(item.asuntos).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([a])=>a);
           return {
-            descripcion: item.descripcion,
+            categoria: item.categoria,
             usuario,
             cantidad: item.cantidad,
-            solucion: suggestedSolutionForCase(item.descripcion, usuario)
+            casos: principales.join(' | '),
+            solucion: solutionByCategory(item.categoria, usuario)
           };
         })
-        .sort((a,b)=>b.cantidad-a.cantidad || a.descripcion.localeCompare(b.descripcion))
-        .filter(item => item.cantidad >= 1);
+        .sort((a,b)=>b.cantidad-a.cantidad || a.categoria.localeCompare(b.categoria))
+        .filter(item => item.cantidad >= (compactMode ? 2 : 1))
+        .slice(0, compactMode ? 15 : 100);
     }
-    function buildCasosRecurrentesHTMLContent(){
-      const data = buildCasosRecurrentesData();
+    function buildCasosRecurrentesHTMLContent(compactMode=false){
+      const data = buildCasosRecurrentesData(compactMode);
       if(!data.length) return '';
       const escReport = v => String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-      const rows = data.map(r => `<tr><td>${escReport(r.descripcion)}</td><td>${escReport(r.usuario)}</td><td style="text-align:center;font-weight:bold;">${escReport(r.cantidad)}</td><td>${escReport(r.solucion)}</td></tr>`).join('');
+      const rows = data.map(r => `<tr><td>${escReport(r.categoria)}</td><td>${escReport(r.usuario)}</td><td style="text-align:center;font-weight:bold;">${escReport(r.cantidad)}</td><td>${escReport(r.solucion)}</td></tr>`).join('');
       return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Reporte de casos recurrentes y soluciones</title><style>
         body{font-family:Arial,Helvetica,sans-serif;margin:28px;color:#333;background:#fff;line-height:1.35}h1{color:#006068;margin:0 0 6px 0}.subtitle{color:#666;margin:0 0 18px 0;font-size:13px}.box{border-left:6px solid #00CE7C;background:#f0fdf4;padding:12px 14px;border-radius:10px;margin:16px 0}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:14px}th{background:#006068;color:#fff;border:1px solid #006068;padding:9px;text-align:left}td{border:1px solid #d1d5db;padding:8px;vertical-align:top}tr:nth-child(even){background:#f8fafc}.note{font-size:11px;color:#666;margin-top:14px}.logo{width:70px;height:70px;border-radius:18px;background:#00CE7C;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;margin-bottom:12px}@media print{body{margin:12mm}table{font-size:10px}td,th{padding:6px}}
-      </style></head><body><div class="logo">IT</div><h1>Reporte de casos recurrentes</h1><p class="subtitle">Generado: ${escReport(nowEcuador())} | Fuente: registros de tickets cargados en el sistema.</p><div class="box"><b>Objetivo:</b> identificar los casos con mayor repetición y proponer soluciones preventivas, guías o acciones institucionales para reducir atenciones repetitivas.</div><table><thead><tr><th>Descripción del caso</th><th>Usuario</th><th>Cantidad estimada de atenciones</th><th>Sugerencia de posible solución</th></tr></thead><tbody>${rows}</tbody></table><p class="note">Nota: Las cantidades son estimadas con base en los casos recurrentes identificados en el reporte de incidentes. La solución propuesta puede ajustarse según validación del equipo de soporte.</p></body></html>`;
+      </style></head><body><div class="logo">IT</div><h1>Reporte de casos recurrentes</h1><p class="subtitle">Generado: ${escReport(nowEcuador())} | Fuente: registros de tickets cargados en el sistema.</p><div class="box"><b>Objetivo:</b> consolidar los casos recurrentes por categoría para obtener un reporte ejecutivo, corto y útil para decisiones de mejora preventiva.</div>${compactMode?'<div class="box"><b>Modo Word compacto:</b> la información se agrupa por categoría y se muestran únicamente las categorías con recurrencia, evitando un informe abultado.</div>':''}<table><thead><tr><th>Categoría</th><th>Usuario</th><th>Cantidad estimada de atenciones</th><th>Sugerencia de posible solución</th></tr></thead><tbody>${rows}</tbody></table><p class="note">Nota: Las cantidades son estimadas con base en los tickets agrupados por categoría. La solución propuesta puede ajustarse según validación del equipo de soporte.</p></body></html>`;
     }
     function exportarCasosRecurrentesHTML(){
       if(!ticketsData.length)return showToast('No hay tickets para analizar','error');
@@ -1217,8 +1263,8 @@
     }
     function exportarCasosRecurrentesWord(){
       if(!ticketsData.length)return showToast('No hay tickets para analizar','error');
-      const html = buildCasosRecurrentesHTMLContent();
-      if(!html)return showToast('No se encontraron casos recurrentes','error');
+      const html = buildCasosRecurrentesHTMLContent(true);
+      if(!html)return showToast('No se encontraron casos recurrentes agrupados','error');
       if(typeof htmlDocx === 'undefined'){
         download('reporte_casos_recurrentes_soluciones.doc', html, 'application/msword');
         return;
