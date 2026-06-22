@@ -1635,11 +1635,42 @@
 
 
     function secCodigo(){ return 'AT-'+String(Math.floor(Math.random()*99999)+1).padStart(5,'0'); }
+    function normalizeTextForSearch(value){
+      return String(value||'')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g,'')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g,' ')
+        .trim();
+    }
+    function periodLooksLikeActive(studentPeriod, activePeriod){
+      const sp=normalizeTextForSearch(studentPeriod);
+      const ap=normalizeTextForSearch(activePeriod);
+      if(!ap) return true;
+      if(!sp) return true;
+      if(sp===ap || sp.includes(ap) || ap.includes(sp)) return true;
+      const hasAbrSep = /abr|abril/.test(sp) && /sep|septiembre/.test(sp) && /abr|abril/.test(ap) && /sep|septiembre/.test(ap);
+      const hasOctMar = /oct|octubre/.test(sp) && /mar|marzo/.test(sp) && /oct|octubre/.test(ap) && /mar|marzo/.test(ap);
+      return hasAbrSep || hasOctMar;
+    }
+    function isStudentRow(u){ return normalizeTextForSearch(u?.tipo).includes('estudiante'); }
     function secStudentOptions(term=''){
       const periodo=currentAcademicPeriod();
-      const q=term.toLowerCase().trim();
-      return directorioData.filter(u=>(u.tipo||'')==='Estudiante' && (!periodo || (u.periodo||'')===periodo) && (!q || [u.cedula,u.nombres,u.correo,u.carrera,u.nivel].some(v=>String(v||'').toLowerCase().includes(q)))).slice(0,80);
+      const q=normalizeTextForSearch(term);
+      const base=directorioData.filter(isStudentRow);
+      let periodRows=base.filter(u=>periodLooksLikeActive(u.periodo, periodo));
+      if(periodRows.length===0) periodRows=base;
+      const rows=periodRows.filter(u=>!q || [u.cedula,u.nombres,u.correo,u.carrera,u.nivel,u.periodo].some(v=>normalizeTextForSearch(v).includes(q)));
+      return rows.slice(0,120);
     }
+    function fillSecStudentManualFields(){
+      const st=directorioData.find(u=>String(u.id)===$('sec-student')?.value);
+      if(!st) return;
+      if($('sec-nombre')) $('sec-nombre').value=st.nombres||'';
+      if($('sec-cedula')) $('sec-cedula').value=st.cedula||'';
+      if($('sec-correo')) $('sec-correo').value=st.correo||'';
+    }
+
     function renderSecretariaModule(){
       if(!$('tab-secretaria')) return;
       const warn=$('sec-sql-warning'); if(warn) warn.classList.toggle('hidden', secretariaTicketsData.length || secretariaUsersData.length || secretariaAuditData.length);
@@ -1657,6 +1688,7 @@
       const audit=$('sec-audit-list'); if(audit){ audit.innerHTML=secretariaAuditData.slice(0,20).map(a=>`<div class="border-b pb-2"><b>${esc(a.accion)}</b> <span class="text-gray-500">${esc(a.modulo)} #${esc(a.registro_id||'')}</span><br><span class="text-xs text-gray-500">${esc(formatDateTimeEcuador(a.created_at))} · ${esc(a.usuario_nombre||'')}</span></div>`).join('')||'<p class="text-gray-400">Sin auditoría registrada.</p>'; }
     }
     document.addEventListener('input', e=>{ if(e.target?.id==='sec-search-student') renderSecretariaModule(); if(e.target?.id==='sec-filter') renderSecretariaModule(); });
+    document.addEventListener('change', e=>{ if(e.target?.id==='sec-student') fillSecStudentManualFields(); });
     document.addEventListener('submit', async e=>{
       if(e.target?.id==='sec-form-user'){ e.preventDefault(); const id=$('sec-user-id').value; const payload={nombre:$('sec-user-name').value,email:$('sec-user-email').value,rol:$('sec-user-role').value,activo:$('sec-user-active').checked}; let res; if(id) res=await sbClient.from('secretaria_usuarios').update(payload).eq('id',id); else res=await sbClient.from('secretaria_usuarios').insert(payload); if(res.error) return showToast(res.error.message,'error'); await secAudit(id?'Editar perfil Secretaría':'Crear perfil Secretaría','secretaria_usuarios',id||null,null,payload); e.target.reset(); $('sec-user-id').value=''; await loadSecretariaData(); renderSecretariaModule(); showToast('Perfil de Secretaría guardado'); }
       if(e.target?.id==='sec-form-ticket'){ e.preventDefault(); const st=directorioData.find(u=>String(u.id)===$('sec-student').value); const sec=secretariaUsersData.find(u=>String(u.id)===$('sec-secretaria').value); const payload={codigo:secCodigo(),usuario_tipo:$('sec-user-type').value,estudiante_id:st?.id||null,cedula:st?.cedula||$('sec-cedula').value,nombre:st?.nombres||$('sec-nombre').value,correo:st?.correo||$('sec-correo').value,whatsapp:$('sec-whatsapp').value,canal:$('sec-canal').value,asunto:$('sec-asunto').value,categoria:$('sec-categoria').value,descripcion:$('sec-descripcion').value,estado:'Abierto',secretaria_id:sec?.id||null,secretaria_nombre:sec?.nombre||'',rating_token:randomToken(),created_by:currentProfile?.id||null}; if(!payload.nombre||!payload.asunto) return showToast('Complete usuario y requerimiento','error'); const {data,error}=await sbClient.from('secretaria_tickets').insert(payload).select().single(); if(error) return showToast(error.message,'error'); await sbClient.from('secretaria_historial').insert({ticket_id:data.id,accion:'Creación',estado_nuevo:'Abierto',secretaria_destino:payload.secretaria_nombre,comentario:'Atención registrada',created_by:currentProfile?.nombre_completo||currentUser?.email}); await secAudit('Crear atención','secretaria_tickets',data.id,null,payload); e.target.reset(); await loadSecretariaData(); renderSecretariaModule(); showToast(`${payload.codigo} asignado a ${payload.secretaria_nombre||'sin asignar'}`); }
