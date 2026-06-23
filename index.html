@@ -860,7 +860,24 @@
     }
     async function markNotificationRead(id){ const {error}=await sbClient.from('notificaciones').update({leido:true,read_at:new Date().toISOString()}).eq('id',id); if(error)return showToast(error.message,'error'); await loadNotifications(); renderNotifications(); }
     async function markAllNotificationsRead(){ const ids=notificationsData.filter(n=>!n.leido).map(n=>n.id); if(!ids.length)return showToast('No hay notificaciones pendientes'); const {error}=await sbClient.from('notificaciones').update({leido:true,read_at:new Date().toISOString()}).in('id',ids); if(error)return showToast(error.message,'error'); await loadNotifications(); renderNotifications(); showToast('Notificaciones marcadas como leídas'); }
-    async function openNotificationTicket(notifId,ticketId){ await markNotificationRead(notifId); switchTab('tab-registros'); setTimeout(()=>abrirModalHistorialTicket(ticketId),250); }
+    async function openNotificationTicket(notifId,ticketId){
+      await markNotificationRead(notifId);
+      try{ await loadTickets(); renderTickets(); }catch(e){ console.warn('No se pudo refrescar tickets antes de abrir notificación', e); }
+      const t=ticketsData.find(x=>x.id===ticketId || x.id_str===ticketId);
+      switchTab('tab-registros');
+      if($('filter-tickets')){
+        $('filter-tickets').value=t?.id_str || ticketId || '';
+        renderTickets();
+      }
+      setTimeout(()=>{
+        if(t){
+          abrirModalEditarTicket(t.id);
+          showToast('Ticket cargado para revisión o resolución.');
+        } else {
+          showToast('No se encontró el ticket transferido. Actualiza Registros e intenta nuevamente.','error');
+        }
+      },300);
+    }
     window.renderNotifications=renderNotifications; window.markNotificationRead=markNotificationRead; window.markAllNotificationsRead=markAllNotificationsRead; window.openNotificationTicket=openNotificationTicket;
 
     function abrirModalEditarTicket(id){
