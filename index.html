@@ -1698,7 +1698,75 @@
     async function toggleSecUser(id,activo){ const {error}=await sbClient.from('secretaria_usuarios').update({activo}).eq('id',id); if(error)return showToast(error.message,'error'); await secAudit(activo?'Activar secretaria':'Inactivar secretaria','secretaria_usuarios',id,null,{activo}); await loadSecretariaData(); renderSecretariaModule(); }
     async function deleteSecUser(id){ if(!confirm('¿Eliminar perfil de Secretaría?'))return; const old=secretariaUsersData.find(u=>String(u.id)===String(id)); const {error}=await sbClient.from('secretaria_usuarios').delete().eq('id',id); if(error)return showToast(error.message,'error'); await secAudit('Eliminar perfil Secretaría','secretaria_usuarios',id,old,null); await loadSecretariaData(); renderSecretariaModule(); }
     window.editSecUser=editSecUser; window.toggleSecUser=toggleSecUser; window.deleteSecUser=deleteSecUser;
-    async function openSecEdit(t){ const nuevo=prompt('Estado: Abierto, En Proceso, Resuelto, Cancelado, Transferido a IT', t.estado||'Abierto'); if(!nuevo)return; const transfer=nuevo==='Transferido a IT'; const comentario=prompt('Comentario / motivo', transfer?'Transferido por Secretaría a Soporte IT':'')||''; const {error}=await sbClient.from('secretaria_tickets').update({estado:nuevo,transferido_it:transfer}).eq('id',t.id); if(error)return showToast(error.message,'error'); await sbClient.from('secretaria_historial').insert({ticket_id:t.id,accion:transfer?'Transferencia a IT':'Actualización',estado_anterior:t.estado,estado_nuevo:nuevo,secretaria_origen:t.secretaria_nombre,secretaria_destino:t.secretaria_nombre,comentario,created_by:currentProfile?.nombre_completo||currentUser?.email}); await secAudit(transfer?'Transferir a IT':'Actualizar atención','secretaria_tickets',t.id,t,{estado:nuevo,transferido_it:transfer}); await loadSecretariaData(); renderSecretariaModule(); showToast(transfer?'Atención transferida a IT':'Atención actualizada'); }
+    function ensureSecEditModal(){
+      if($('modal-sec-edit')) return;
+      const wrap=document.createElement('div');
+      wrap.id='modal-sec-edit';
+      wrap.className='modal fixed inset-0 bg-black/50 z-[160] items-center justify-center p-4';
+      wrap.innerHTML=`<div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto">
+        <div class="p-6 border-b flex items-start justify-between gap-3">
+          <div><h2 class="text-xl font-bold text-instVerdeOscuro">Atender requerimiento <span id="sec-edit-code" class="text-instPlomo"></span></h2><p class="text-xs text-gray-500">Cambia el estado desde el combo, reasigna secretaria, registra comentario y deja auditoría del cambio.</p></div>
+          <button type="button" onclick="closeSecEditModal()" class="text-gray-400 hover:text-red-500 text-2xl"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="sec-edit-form" class="p-6 space-y-4">
+          <input type="hidden" id="sec-edit-id">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label class="block text-sm font-semibold mb-1">Requerimiento</label><input id="sec-edit-asunto" class="field"></div>
+            <div><label class="block text-sm font-semibold mb-1">Estado</label><select id="sec-edit-estado" class="field"><option>Abierto</option><option>En Proceso</option><option>Pendiente Usuario</option><option>Resuelto</option><option>Cancelado</option><option>Transferido a IT</option></select></div>
+            <div><label class="block text-sm font-semibold mb-1">Secretaria asignada</label><select id="sec-edit-secretaria" class="field"></select></div>
+            <div><label class="block text-sm font-semibold mb-1">Canal</label><select id="sec-edit-canal" class="field"><option>Presencial</option><option>WhatsApp</option><option>Correo</option><option>Teams</option><option>Teléfono</option></select></div>
+          </div>
+          <div><label class="block text-sm font-semibold mb-1">Detalle / descripción</label><textarea id="sec-edit-descripcion" rows="3" class="field resize-none"></textarea></div>
+          <div><label class="block text-sm font-semibold mb-1">Comentario de seguimiento / motivo</label><textarea id="sec-edit-comentario" rows="3" class="field resize-none" placeholder="Ejemplo: requerimiento resuelto, cancelado por duplicado o transferido a IT por soporte técnico."></textarea></div>
+          <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700"><b>Estados disponibles:</b> Abierto, En Proceso, Pendiente Usuario, Resuelto, Cancelado y Transferido a IT. Ya no se escribe el estado manualmente.</div>
+          <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t"><button type="button" onclick="closeSecEditModal()" class="btn btn-muted px-4 py-2">Cancelar</button><button type="submit" class="btn btn-green px-5 py-2"><i class="fa-solid fa-floppy-disk"></i> Guardar cambios</button></div>
+        </form>
+      </div>`;
+      document.body.appendChild(wrap);
+      $('sec-edit-form').onsubmit=saveSecEditFromModal;
+    }
+    function closeSecEditModal(){ const m=$('modal-sec-edit'); if(m) m.classList.remove('flex'); }
+    function openSecEdit(t){
+      ensureSecEditModal();
+      $('sec-edit-id').value=t.id;
+      $('sec-edit-code').textContent=t.codigo||'';
+      $('sec-edit-asunto').value=t.asunto||'';
+      $('sec-edit-estado').value=t.transferido_it?'Transferido a IT':(t.estado||'Abierto');
+      $('sec-edit-canal').value=t.canal||'Presencial';
+      $('sec-edit-descripcion').value=t.descripcion||'';
+      $('sec-edit-comentario').value='';
+      $('sec-edit-secretaria').innerHTML='<option value="">Sin asignar</option>'+secretariaUsersData.filter(s=>s.activo!==false).map(s=>`<option value="${esc(s.id)}" ${String(s.id)===String(t.secretaria_id||'')?'selected':''}>${esc(s.nombre)} · ${esc(s.rol)}</option>`).join('');
+      $('modal-sec-edit').classList.add('flex');
+    }
+    async function saveSecEditFromModal(e){
+      e.preventDefault();
+      const id=$('sec-edit-id').value;
+      const old=secretariaTicketsData.find(t=>String(t.id)===String(id));
+      if(!old) return showToast('No se encontró la atención seleccionada','error');
+      const nuevo=$('sec-edit-estado').value;
+      const transfer=nuevo==='Transferido a IT';
+      const sec=secretariaUsersData.find(u=>String(u.id)===$('sec-edit-secretaria').value);
+      const comentario=($('sec-edit-comentario').value||'').trim();
+      const payload={
+        asunto:$('sec-edit-asunto').value,
+        estado: transfer ? 'Transferido a IT' : nuevo,
+        transferido_it: transfer,
+        secretaria_id: sec?.id||null,
+        secretaria_nombre: sec?.nombre||'',
+        canal:$('sec-edit-canal').value,
+        descripcion:$('sec-edit-descripcion').value
+      };
+      if(nuevo==='Resuelto' && !old.rating_token && !old.valoracion_calificacion) payload.rating_token=randomToken();
+      if(nuevo==='Cancelado') payload.rating_token=null;
+      const {error}=await sbClient.from('secretaria_tickets').update(payload).eq('id',id);
+      if(error)return showToast(error.message,'error');
+      await sbClient.from('secretaria_historial').insert({ticket_id:id,accion:transfer?'Transferencia a IT':nuevo==='Resuelto'?'Resolución':nuevo==='Cancelado'?'Cancelación':'Actualización',estado_anterior:old.estado,estado_nuevo:payload.estado,secretaria_origen:old.secretaria_nombre,secretaria_destino:payload.secretaria_nombre,comentario,created_by:currentProfile?.nombre_completo||currentUser?.email});
+      await secAudit(transfer?'Transferir a IT':nuevo==='Resuelto'?'Resolver atención':nuevo==='Cancelado'?'Cancelar atención':'Actualizar atención','secretaria_tickets',id,old,payload);
+      closeSecEditModal();
+      await loadSecretariaData();
+      renderSecretariaModule();
+      showToast(transfer?'Atención transferida a IT':nuevo==='Resuelto'?'Atención resuelta':nuevo==='Cancelado'?'Atención cancelada':'Atención actualizada');
+    }
     async function deleteSecTicket(id){ if(!confirm('¿Eliminar esta atención?'))return; const old=secretariaTicketsData.find(t=>String(t.id)===String(id)); const {error}=await sbClient.from('secretaria_tickets').delete().eq('id',id); if(error)return showToast(error.message,'error'); await secAudit('Eliminar atención','secretaria_tickets',id,old,null); await loadSecretariaData(); renderSecretariaModule(); }
     window.openSecEdit=openSecEdit; window.deleteSecTicket=deleteSecTicket;
 
