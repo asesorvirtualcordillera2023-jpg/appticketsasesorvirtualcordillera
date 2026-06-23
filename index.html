@@ -362,6 +362,7 @@
         <div><label class="block text-sm font-semibold mb-1">Comentario de seguimiento</label><textarea id="edit-comentario" rows="2" class="field resize-none" placeholder="Describe el motivo del cambio, solución aplicada o información adicional..."></textarea></div>
         <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t">
           <button type="button" onclick="cerrarModalEditarTicket()" class="btn btn-muted px-4 py-2">Cancelar</button>
+          <button type="button" id="btn-devolver-secretaria" onclick="devolverTicketASecretariaDesdeIT()" class="btn bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 hidden"><i class="fa-solid fa-share-from-square"></i> Devolver a Secretaría</button>
           <button type="button" onclick="abrirModalTransferirDesdeEdicion()" class="btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2"><i class="fa-solid fa-right-left"></i> Transferir</button>
           <button type="submit" class="btn btn-primary px-5 py-2"><i class="fa-solid fa-floppy-disk"></i> Guardar cambios</button>
         </div>
@@ -880,16 +881,66 @@
     }
     window.renderNotifications=renderNotifications; window.markNotificationRead=markNotificationRead; window.markAllNotificationsRead=markAllNotificationsRead; window.openNotificationTicket=openNotificationTicket;
 
+    function isTicketFromSecretaria(t){
+      return !!(t && (String(t.id_str||'').startsWith('TKT-SEC-') || String(t.canal||'').toLowerCase()==='secretaría' || String(t.canal||'').toLowerCase()==='secretaria' || String(t.asunto||'').startsWith('[Secretaría]') || String(t.descripcion||'').includes('Código Secretaría:')));
+    }
     function abrirModalEditarTicket(id){
       const t=ticketsData.find(x=>x.id===id); if(!t)return;
       $('edit-ticket-id').value=t.id; $('edit-ticket-title').textContent=t.id_str||''; $('edit-asunto').value=t.asunto||''; $('edit-estado').value=t.estado||'Requiere Seguimiento';
       fillConfigSelect('edit-categoria',configData.categorias||[],t.categoria); fillConfigSelect('edit-canal',configData.canales||[],t.canal);
       $('edit-subcategoria').value=t.subcategoria||''; $('edit-prioridad').value=t.prioridad||'Media'; $('edit-descripcion').value=t.descripcion||''; $('edit-comentario').value='';
       $('edit-assigned-agent').innerHTML=agentOptions(agentId(t)); $('edit-tiempo').value=t.estado==='Resuelto'?formatMinutes(ticketResolutionMinutes(t)):'En proceso';
+      const btnDev=$('btn-devolver-secretaria');
+      if(btnDev){
+        const alreadyClosed = ['Resuelto','Cancelado'].includes(t.estado);
+        btnDev.classList.toggle('hidden', !isTicketFromSecretaria(t) || alreadyClosed);
+      }
       $('modal-editar-ticket').classList.add('flex');
     }
     function cerrarModalEditarTicket(){ $('modal-editar-ticket').classList.remove('flex'); }
     window.abrirModalEditarTicket=abrirModalEditarTicket; window.cerrarModalEditarTicket=cerrarModalEditarTicket;
+
+    async function devolverTicketASecretariaDesdeIT(){
+      const id=$('edit-ticket-id')?.value;
+      const it=ticketsData.find(x=>x.id===id);
+      if(!it) return showToast('No se encontró el ticket IT seleccionado.','error');
+      if(!isTicketFromSecretaria(it)) return showToast('Este ticket no proviene de Secretaría.','error');
+      const comentario=($('edit-comentario')?.value||'').trim();
+      if(!confirm('¿Devolver este ticket a Secretaría como solucionado por Soporte IT?')) return;
+      const now=new Date().toISOString();
+      const itPayload={
+        estado:'Resuelto',
+        resolved_at:now,
+        resolution_minutes:ticketResolutionMinutes(it) ?? minutesBetween(it.created_at,now) ?? 0,
+        last_status_change_at:now,
+        rating_token:null,
+        rating_token_expires_at:null
+      };
+      const {error:itErr}=await sbClient.from('tickets').update(itPayload).eq('id',it.id);
+      if(itErr) return showToast('No se pudo cerrar el ticket IT: '+itErr.message,'error');
+      await registrarSeguimiento(it.id,{accion:'Devolución a Secretaría',estado_anterior:it.estado,estado_nuevo:'Resuelto',comentario:comentario||'Soporte IT solucionó el requerimiento y lo devuelve a Secretaría para cierre/valoración.'},false);
+      let secUpdated=false;
+      try{
+        const {data:secTickets,error:secFindErr}=await sbClient.from('secretaria_tickets').select('*').eq('it_ticket_id',it.id).limit(1);
+        if(secFindErr) throw secFindErr;
+        const sec=secTickets && secTickets[0];
+        if(sec){
+          const secPayload={estado:'Resuelto',rating_token:sec.rating_token||randomToken(),descripcion:`${sec.descripcion||''}
+
+Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}`.trim()};
+          const {error:secErr}=await sbClient.from('secretaria_tickets').update(secPayload).eq('id',sec.id);
+          if(secErr) throw secErr;
+          await sbClient.from('secretaria_historial').insert({ticket_id:sec.id,accion:'Devuelto por Soporte IT',estado_anterior:sec.estado,estado_nuevo:'Resuelto',secretaria_origen:sec.secretaria_nombre,secretaria_destino:sec.secretaria_nombre,comentario:`Ticket IT ${it.id_str||''} resuelto y devuelto a Secretaría. ${comentario||''}`,created_by:currentProfile?.nombre_completo||currentUser?.email||'Soporte IT'});
+          await secAudit('Devuelto por Soporte IT','secretaria_tickets',sec.id,sec,secPayload);
+          secUpdated=true;
+        }
+      }catch(e){ console.warn('No se pudo actualizar atención de Secretaría', e); }
+      cerrarModalEditarTicket();
+      await loadTickets(); renderTickets();
+      try{ await loadSecretariaData(); renderSecretariaModule(); }catch(e){}
+      showToast(secUpdated?'Ticket resuelto y devuelto a Secretaría.':'Ticket IT resuelto. No se encontró la atención vinculada en Secretaría.');
+    }
+    window.devolverTicketASecretariaDesdeIT=devolverTicketASecretariaDesdeIT;
 
     $('form-editar-ticket').onsubmit=async e=>{
       e.preventDefault();
