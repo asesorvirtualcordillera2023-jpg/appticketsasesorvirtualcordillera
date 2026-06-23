@@ -12,78 +12,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <script>
     tailwind.config = { theme: { extend: { colors: { instVerdeClaro:'#00CE7C', instVerdeOscuro:'#006068', instTomate:'#E47E3D', instPlomo:'#666666', instBlanco:'#FFFFFF' }, fontFamily: { sans:['Inter','system-ui','sans-serif'] } } } }
-
-
-    // Auditoría general y accesos de Secretaría
-    let auditoriaGeneralData = [];
-    function secRoleToAgentRole(r){ return r==='supervisora'?'supervisora_secretaria':(r==='admin'?'admin_secretaria':'secretaria'); }
-    async function syncSecretariaAccessProfile(payload){
-      try{
-        if(!payload?.email) return;
-        const role = secRoleToAgentRole(payload.rol);
-        const permisos = permissionsFromRole(role);
-        const existing = await sbClient.from('agentes').select('*').eq('email', payload.email).maybeSingle();
-        if(existing.error) throw existing.error;
-        if(existing.data){
-          await sbClient.from('agentes').update({nombre_completo:payload.nombre,email:payload.email,rol:role,permisos,activo:payload.activo!==false}).eq('id', existing.data.id);
-        }
-      }catch(e){ console.warn('No se pudo sincronizar perfil de acceso Secretaría', e); }
-    }
-    function copySecAccessLink(id){
-      const u = secretariaUsersData.find(x=>String(x.id)===String(id));
-      if(!u) return;
-      const role = secRoleToAgentRole(u.rol);
-      const url = `${appBaseUrl()}?auth=register&email=${encodeURIComponent(u.email||'')}&name=${encodeURIComponent(u.nombre||'')}&role=${encodeURIComponent(role)}`;
-      navigator.clipboard.writeText(url);
-      showToast('Enlace de registro/acceso copiado. La secretaria debe crear su contraseña desde ese enlace o usar recuperación.');
-    }
-    async function loadAuditoriaGeneral(){
-      const rows=[];
-      try{
-        const {data}=await sbClient.from('ticket_seguimientos').select('*').order('created_at',{ascending:false}).limit(500);
-        (data||[]).forEach(r=>rows.push({fecha:r.created_at, modulo:'Soporte IT', accion:r.accion||'Seguimiento', usuario:r.created_by_nombre||r.agente_origen_nombre||'', registro:r.ticket_id||'', detalle:[r.estado_anterior,r.estado_nuevo,r.comentario].filter(Boolean).join(' | ')}));
-      }catch(e){ console.warn('Auditoría IT no disponible', e); }
-      try{
-        const {data}=await sbClient.from('secretaria_auditoria').select('*').order('created_at',{ascending:false}).limit(500);
-        (data||[]).forEach(r=>rows.push({fecha:r.created_at, modulo:'Secretaría', accion:r.accion||'', usuario:r.usuario_nombre||'', registro:r.registro_id||'', detalle:`${r.modulo||''} ${r.datos_despues?JSON.stringify(r.datos_despues).slice(0,180):''}`}));
-      }catch(e){ console.warn('Auditoría Secretaría no disponible', e); }
-      auditoriaGeneralData = rows.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
-    }
-    function filteredAuditoria(){
-      const f=$('aud-from')?.value, t=$('aud-to')?.value, m=$('aud-modulo')?.value, q=($('aud-search')?.value||'').toLowerCase();
-      return auditoriaGeneralData.filter(r=>{
-        const d=formatDateEcuador(r.fecha);
-        if(f && d<f) return false;
-        if(t && d>t) return false;
-        if(m && r.modulo!==m) return false;
-        if(q && ![r.fecha,r.modulo,r.accion,r.usuario,r.registro,r.detalle].some(v=>String(v||'').toLowerCase().includes(q))) return false;
-        return true;
-      });
-    }
-    function renderAuditoriaGeneral(){
-      const rows=filteredAuditoria();
-      if($('aud-kpi-total')) $('aud-kpi-total').textContent=rows.length;
-      if($('aud-kpi-it')) $('aud-kpi-it').textContent=rows.filter(r=>r.modulo==='Soporte IT').length;
-      if($('aud-kpi-sec')) $('aud-kpi-sec').textContent=rows.filter(r=>r.modulo==='Secretaría').length;
-      if($('aud-kpi-last')) $('aud-kpi-last').textContent=rows[0]?formatDateTimeEcuador(rows[0].fecha):'-';
-      if($('aud-count')) $('aud-count').textContent=`${rows.length} registros`;
-      const body=$('auditoria-table-body');
-      if(body) body.innerHTML=rows.map(r=>`<tr class="border-t hover:bg-gray-50"><td class="px-4 py-3 whitespace-nowrap">${esc(formatDateTimeEcuador(r.fecha))}</td><td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-bold ${r.modulo==='Soporte IT'?'bg-blue-100 text-blue-700':'bg-green-100 text-green-700'}">${esc(r.modulo)}</span></td><td class="px-4 py-3 font-semibold">${esc(r.accion)}</td><td class="px-4 py-3">${esc(r.usuario)}</td><td class="px-4 py-3 text-xs">${esc(r.registro)}</td><td class="px-4 py-3 text-xs text-gray-600">${esc(r.detalle)}</td></tr>`).join('')||'<tr><td colspan="6" class="p-8 text-center text-gray-400">No hay auditoría para los filtros seleccionados.</td></tr>';
-    }
-    function resetAuditoriaFilters(){ ['aud-from','aud-to','aud-search'].forEach(id=>{if($(id))$(id).value=''}); if($('aud-modulo')) $('aud-modulo').value=''; renderAuditoriaGeneral(); }
-    function exportAuditoriaCSV(){
-      const rows=filteredAuditoria(); const headers=['Fecha','Modulo','Accion','Usuario','Registro','Detalle'];
-      const csv=[headers.join(',')].concat(rows.map(r=>[formatDateTimeEcuador(r.fecha),r.modulo,r.accion,r.usuario,r.registro,r.detalle].map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(','))).join('\n');
-      const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'})); a.download='auditoria_general.csv'; a.click();
-    }
-    function exportAuditoriaHTML(){
-      const rows=filteredAuditoria();
-      const html=`<!doctype html><html><head><meta charset="utf-8"><title>Reporte de Auditoría General</title><style>body{font-family:Arial;color:#333}h1{color:#006068}.kpi{display:inline-block;border:1px solid #ddd;border-radius:12px;padding:12px;margin:6px}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#006068;color:#fff}td,th{border:1px solid #ddd;padding:7px}</style></head><body><h1>Reporte de Auditoría General</h1><p>Generado: ${nowEcuador()}</p><div class="kpi"><b>Total:</b> ${rows.length}</div><div class="kpi"><b>Soporte IT:</b> ${rows.filter(r=>r.modulo==='Soporte IT').length}</div><div class="kpi"><b>Secretaría:</b> ${rows.filter(r=>r.modulo==='Secretaría').length}</div><table><thead><tr><th>Fecha</th><th>Módulo</th><th>Acción</th><th>Usuario</th><th>Registro</th><th>Detalle</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(formatDateTimeEcuador(r.fecha))}</td><td>${esc(r.modulo)}</td><td>${esc(r.accion)}</td><td>${esc(r.usuario)}</td><td>${esc(r.registro)}</td><td>${esc(r.detalle)}</td></tr>`).join('')}</tbody></table></body></html>`;
-      const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'})); a.download='auditoria_general.html'; a.click();
-    }
-    document.addEventListener('input', e=>{ if(['aud-search','aud-from','aud-to'].includes(e.target?.id)) renderAuditoriaGeneral(); });
-    document.addEventListener('change', e=>{ if(['aud-modulo','aud-from','aud-to'].includes(e.target?.id)) renderAuditoriaGeneral(); });
-
   </script>
   <style>
     body{font-family:Inter,system-ui,sans-serif;background:#f3f4f6}.tab-content{display:none;animation:fadeIn .2s ease-in-out}.tab-content.active{display:block}@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#006068;border-radius:4px}.star-rating i{transition:color .2s,transform .2s;cursor:pointer}.star-rating i:hover{transform:scale(1.15)}.star-rating i.active{color:#f59e0b}.modal{display:none}.modal.flex{display:flex}.chart-box{height:300px}.field{width:100%;padding:.75rem;border:1px solid #d1d5db;border-radius:.75rem;outline:none;background:#fff}.field:focus{box-shadow:0 0 0 2px #00CE7C55;border-color:#00CE7C}.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border-radius:.75rem;font-weight:700;transition:.2s}.btn-primary{background:#006068;color:#fff}.btn-primary:hover{background:#00CE7C}.btn-green{background:#00CE7C;color:#fff}.btn-green:hover{background:#16a34a}.btn-orange{background:#E47E3D;color:#fff}.btn-orange:hover{background:#ea580c}.btn-muted{background:#e5e7eb;color:#374151}.btn-muted:hover{background:#d1d5db}.doc-table{width:100%;border-collapse:collapse;font-size:.875rem}.doc-table th{background:#006068;color:#fff;padding:.5rem;border:1px solid #006068}.doc-table td{padding:.45rem;border:1px solid #d1d5db}
@@ -199,9 +127,7 @@
         <button onclick="switchTab('tab-directorio')" id="btn-tab-directorio" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-address-book w-5 text-center"></i> Directorio</button>
         <button onclick="switchTab('tab-agentes')" id="btn-tab-agentes" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-users-gear w-5 text-center"></i> Agentes</button>
         <button onclick="switchTab('tab-periodos')" id="btn-tab-periodos" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-calendar-days w-5 text-center"></i> Periodos Académicos</button>
-        <button onclick="switchTab('tab-secretaria')" id="btn-tab-secretaria" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-user-tie w-5 text-center"></i> Atención Secretaría</button>
         <button onclick="switchTab('tab-notificaciones')" id="btn-tab-notificaciones" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-bell w-5 text-center"></i> Notificaciones <span id="notif-count-nav" class="notification-dot hidden ml-auto">0</span></button>
-        <button onclick="switchTab('tab-auditoria')" id="btn-tab-auditoria" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-shield-halved w-5 text-center"></i> Auditoría</button>
         <button onclick="switchTab('tab-config')" id="btn-tab-config" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-gear w-5 text-center"></i> Configuración</button>
       </nav>
       <div class="p-4 border-t border-white/10"><button onclick="logout()" class="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-instTomate hover:bg-instTomate hover:text-white rounded-lg transition-colors border border-instTomate"><i class="fa-solid fa-sign-out-alt"></i> Cerrar sesión</button></div>
@@ -395,37 +321,7 @@
           </div>
         </section>
 
-        <section id="tab-secretaria" class="tab-content max-w-7xl mx-auto">
-          <div class="flex items-center gap-3 mb-6"><div class="module-logo-wrap"><i class="fa-solid fa-user-tie text-white text-xl"></i></div><div><h2 class="text-2xl font-bold text-instVerdeOscuro">Atención Secretaría / Estudiantil</h2><p class="text-sm text-instPlomo">Módulo independiente para atención a estudiantes y externos, con supervisión, valoración, transferencia a IT y auditoría.</p></div></div>
-          <div id="sec-sql-warning" class="hidden bg-orange-50 border border-orange-200 text-orange-800 rounded-2xl p-4 mb-5 text-sm"><b>Falta migración:</b> ejecuta <code>SQL_MIGRACION_SECRETARIA_ATENCION.sql</code> en Supabase para activar este módulo.</div>
-          <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6"><div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Total</p><b id="sec-kpi-total" class="text-2xl text-instVerdeOscuro">0</b></div><div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Abiertos</p><b id="sec-kpi-abiertos" class="text-2xl text-instTomate">0</b></div><div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Resueltos</p><b id="sec-kpi-resueltos" class="text-2xl text-instVerdeClaro">0</b></div><div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Transferidos IT</p><b id="sec-kpi-transferidos" class="text-2xl text-instVerdeOscuro">0</b></div><div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Valoración</p><b id="sec-kpi-rating" class="text-2xl text-yellow-500">0.0</b></div></div>
-          <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div class="bg-white rounded-2xl shadow-sm border p-6 h-fit"><h3 class="font-semibold text-instVerdeOscuro mb-4"><i class="fa-solid fa-ticket mr-2"></i>Nueva atención</h3><form id="sec-form-ticket" class="space-y-3"><select id="sec-user-type" class="field"><option>Estudiante</option><option>Externo</option></select><input id="sec-search-student" class="field" placeholder="Buscar estudiante del periodo activo"><select id="sec-student" class="field" size="6"></select><div class="grid grid-cols-1 md:grid-cols-2 gap-2"><input id="sec-nombre" class="field" placeholder="Nombre externo/manual"><input id="sec-cedula" class="field" placeholder="Cédula / identificación"><input id="sec-correo" class="field" placeholder="Correo"><input id="sec-whatsapp" class="field" placeholder="WhatsApp"></div><input id="sec-asunto" class="field" placeholder="Requerimiento" required><select id="sec-categoria" class="field"><option>Información académica</option><option>Matrícula</option><option>Certificados</option><option>Derivación a IT</option><option>Otro</option></select><select id="sec-canal" class="field"><option>Presencial</option><option>WhatsApp</option><option>Correo</option><option>Teams</option><option>Teléfono</option></select><select id="sec-secretaria" class="field"></select><textarea id="sec-descripcion" class="field" rows="3" placeholder="Detalle de la atención"></textarea><button class="btn btn-green w-full py-2">Guardar atención</button></form></div>
-            <div class="xl:col-span-2 bg-white rounded-2xl shadow-sm border overflow-hidden"><div class="p-4 border-b bg-gray-50 flex flex-col md:flex-row gap-3 md:items-center md:justify-between"><div><h3 class="font-semibold">Tickets de Secretaría</h3><p class="text-xs text-gray-500">Asignación tipo turno: “AT-00000 asignado a secretaria X”.</p></div><input id="sec-filter" class="field py-2 w-72" placeholder="Filtrar atenciones..."></div><div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="bg-gray-50"><tr><th class="px-4 py-3">Ticket</th><th class="px-4 py-3">Usuario</th><th class="px-4 py-3">Caso</th><th class="px-4 py-3">Asignación</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3 text-center">Acciones</th></tr></thead><tbody id="sec-tickets-body"></tbody></table></div></div>
-          </div>
-          <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-6"><div class="bg-white rounded-2xl border p-6"><h3 class="font-semibold text-instVerdeOscuro mb-4"><i class="fa-solid fa-user-plus mr-2"></i>Secretarias / Supervisora</h3><form id="sec-form-user" class="space-y-3"><input id="sec-user-id" type="hidden"><input id="sec-user-name" class="field" placeholder="Nombre" required><input id="sec-user-email" class="field" placeholder="Correo"><select id="sec-user-role" class="field"><option value="secretaria">Secretaria</option><option value="supervisora">Supervisora</option><option value="admin">Admin Secretaría</option></select><label class="flex items-center gap-2 text-sm"><input id="sec-user-active" type="checkbox" checked> Activo</label><button class="btn btn-primary w-full py-2">Guardar perfil</button></form></div><div class="xl:col-span-2 bg-white rounded-2xl border overflow-hidden"><div class="p-4 bg-gray-50 border-b"><h3 class="font-semibold">Personal de Secretaría</h3></div><div id="sec-users-list" class="p-4 grid md:grid-cols-2 gap-3"></div></div></div>
-          <div class="bg-white rounded-2xl border p-6 mt-6"><h3 class="font-semibold text-instVerdeOscuro mb-3"><i class="fa-solid fa-shield-halved mr-2"></i>Auditoría reciente</h3><div id="sec-audit-list" class="space-y-2 text-sm"></div></div>
-        </section>
-
-        <section id="tab-auditoria" class="tab-content max-w-7xl mx-auto">
-          <div class="flex items-center gap-3 mb-6"><div class="module-logo-wrap"><img class="module-logo" src="logo-icono-cordillera.jpg" alt="Logo"></div><div><h2 class="text-2xl font-bold text-instVerdeOscuro">Auditoría General</h2><p class="text-sm text-instPlomo">Consolidado de acciones de Soporte IT y Atención Secretaría con filtros dinámicos.</p></div></div>
-          <div class="bg-white rounded-2xl border shadow-sm p-4 mb-6 grid grid-cols-1 md:grid-cols-5 gap-3">
-            <input type="date" id="aud-from" class="field py-2">
-            <input type="date" id="aud-to" class="field py-2">
-            <select id="aud-modulo" class="field py-2"><option value="">Todos los módulos</option><option value="IT">Soporte IT</option><option value="Secretaría">Atención Secretaría</option></select>
-            <input type="text" id="aud-search" class="field py-2" placeholder="Buscar usuario, acción, registro...">
-            <button onclick="resetAuditoriaFilters()" class="btn btn-muted py-2"><i class="fa-solid fa-rotate-left"></i> Limpiar</button>
-            <div class="md:col-span-5 flex flex-wrap gap-2 justify-end">
-              <button onclick="loadAuditoriaGeneral().then(renderAuditoriaGeneral)" class="btn btn-muted px-4 py-2"><i class="fa-solid fa-rotate"></i> Actualizar</button>
-              <button onclick="exportAuditoriaCSV()" class="btn btn-green px-4 py-2"><i class="fa-solid fa-file-csv"></i> Exportar CSV</button>
-              <button onclick="exportAuditoriaHTML()" class="btn btn-primary px-4 py-2"><i class="fa-solid fa-file-code"></i> Reporte HTML</button>
-            </div>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"><div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Total acciones</p><b id="aud-kpi-total" class="text-2xl text-instVerdeOscuro">0</b></div><div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Soporte IT</p><b id="aud-kpi-it" class="text-2xl text-blue-600">0</b></div><div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Secretaría</p><b id="aud-kpi-sec" class="text-2xl text-instTomate">0</b></div><div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Última acción</p><b id="aud-kpi-last" class="text-sm text-gray-600">-</b></div></div>
-          <div class="bg-white rounded-2xl border shadow-sm overflow-hidden"><div class="p-4 border-b bg-gray-50 flex justify-between items-center"><h3 class="font-semibold text-instVerdeOscuro">Registros de auditoría</h3><span id="aud-count" class="text-xs bg-instVerdeClaro text-white px-3 py-1 rounded-full">0</span></div><div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="bg-gray-50"><tr><th class="px-4 py-3">Fecha</th><th class="px-4 py-3">Módulo</th><th class="px-4 py-3">Acción</th><th class="px-4 py-3">Usuario</th><th class="px-4 py-3">Registro</th><th class="px-4 py-3">Detalle</th></tr></thead><tbody id="auditoria-table-body"></tbody></table></div></div>
-        </section>
-
-<section id="tab-config" class="tab-content max-w-6xl mx-auto"><div class="flex items-center gap-3 mb-6"><div class="module-logo-wrap"><img class="module-logo" src="data:image/jpeg;base64,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" alt="Logo Cordillera"></div><h2 class="text-2xl font-bold text-instVerdeOscuro">Configuración</h2></div><div class="grid grid-cols-1 md:grid-cols-3 gap-6"><div class="bg-white p-6 rounded-2xl shadow-sm border"><h3 class="font-semibold text-instVerdeOscuro mb-2 border-b pb-2"><i class="fa-solid fa-upload"></i> Importar Directorio CSV</h3><p class="text-xs text-instPlomo mb-4">Columnas: CEDULA,NOMBRE,CORREO,E-MAIL,CARRERA,NIVEL,TIPO,PERIODO</p><div class="bg-green-50 border border-green-200 text-green-800 rounded-xl p-3 text-xs mb-4"><b>Periodo activo:</b> <span id="periodo-activo-import-label">-</span><br>Si el CSV no trae PERIODO, se asignará el periodo activo. Si la cédula ya existe, se omitirá para evitar duplicados.</div><div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center"><input type="file" id="csv-file" accept=".csv" class="hidden" onchange="handleCSVUpload(event)"><label for="csv-file" class="cursor-pointer flex flex-col items-center"><i class="fa-solid fa-cloud-arrow-up text-4xl text-instVerdeClaro mb-3"></i><span class="font-semibold">Seleccionar archivo CSV</span><span class="text-xs text-gray-400 mt-1" id="file-name-display">Ningún archivo seleccionado</span></label></div></div><div class="bg-white p-6 rounded-2xl shadow-sm border space-y-6"><div><h3 class="font-semibold text-instVerdeOscuro mb-2 border-b pb-2">Categorías</h3><div class="flex gap-2 mb-3"><input type="text" id="new-cat" class="field py-2" placeholder="Nueva categoría..."><button onclick="addConfigItem('categorias','new-cat')" class="btn btn-green px-4"><i class="fa-solid fa-plus"></i></button></div><div id="list-categorias" class="flex flex-wrap gap-2"></div></div><div><h3 class="font-semibold text-instVerdeOscuro mb-2 border-b pb-2">Canales</h3><div class="flex gap-2 mb-3"><input type="text" id="new-canal" class="field py-2" placeholder="Nuevo canal..."><button onclick="addConfigItem('canales','new-canal')" class="btn btn-primary px-4"><i class="fa-solid fa-plus"></i></button></div><div id="list-canales" class="flex flex-wrap gap-2"></div></div></div></div></section>
+        <section id="tab-config" class="tab-content max-w-6xl mx-auto"><div class="flex items-center gap-3 mb-6"><div class="module-logo-wrap"><img class="module-logo" src="data:image/jpeg;base64,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" alt="Logo Cordillera"></div><h2 class="text-2xl font-bold text-instVerdeOscuro">Configuración</h2></div><div class="grid grid-cols-1 md:grid-cols-3 gap-6"><div class="bg-white p-6 rounded-2xl shadow-sm border"><h3 class="font-semibold text-instVerdeOscuro mb-2 border-b pb-2"><i class="fa-solid fa-upload"></i> Importar Directorio CSV</h3><p class="text-xs text-instPlomo mb-4">Columnas: CEDULA,NOMBRE,CORREO,E-MAIL,CARRERA,NIVEL,TIPO,PERIODO</p><div class="bg-green-50 border border-green-200 text-green-800 rounded-xl p-3 text-xs mb-4"><b>Periodo activo:</b> <span id="periodo-activo-import-label">-</span><br>Si el CSV no trae PERIODO, se asignará el periodo activo. Si la cédula ya existe, se omitirá para evitar duplicados.</div><div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center"><input type="file" id="csv-file" accept=".csv" class="hidden" onchange="handleCSVUpload(event)"><label for="csv-file" class="cursor-pointer flex flex-col items-center"><i class="fa-solid fa-cloud-arrow-up text-4xl text-instVerdeClaro mb-3"></i><span class="font-semibold">Seleccionar archivo CSV</span><span class="text-xs text-gray-400 mt-1" id="file-name-display">Ningún archivo seleccionado</span></label></div></div><div class="bg-white p-6 rounded-2xl shadow-sm border space-y-6"><div><h3 class="font-semibold text-instVerdeOscuro mb-2 border-b pb-2">Categorías</h3><div class="flex gap-2 mb-3"><input type="text" id="new-cat" class="field py-2" placeholder="Nueva categoría..."><button onclick="addConfigItem('categorias','new-cat')" class="btn btn-green px-4"><i class="fa-solid fa-plus"></i></button></div><div id="list-categorias" class="flex flex-wrap gap-2"></div></div><div><h3 class="font-semibold text-instVerdeOscuro mb-2 border-b pb-2">Canales</h3><div class="flex gap-2 mb-3"><input type="text" id="new-canal" class="field py-2" placeholder="Nuevo canal..."><button onclick="addConfigItem('canales','new-canal')" class="btn btn-primary px-4"><i class="fa-solid fa-plus"></i></button></div><div id="list-canales" class="flex flex-wrap gap-2"></div></div></div></div></section>
       </div>
     </main>
   </div>
@@ -454,7 +350,6 @@
         <div><label class="block text-sm font-semibold mb-1">Comentario de seguimiento</label><textarea id="edit-comentario" rows="2" class="field resize-none" placeholder="Describe el motivo del cambio, solución aplicada o información adicional..."></textarea></div>
         <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t">
           <button type="button" onclick="cerrarModalEditarTicket()" class="btn btn-muted px-4 py-2">Cancelar</button>
-          <button type="button" id="btn-devolver-secretaria" onclick="devolverTicketASecretariaDesdeIT()" class="btn bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 hidden"><i class="fa-solid fa-share-from-square"></i> Devolver a Secretaría</button>
           <button type="button" onclick="abrirModalTransferirDesdeEdicion()" class="btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2"><i class="fa-solid fa-right-left"></i> Transferir</button>
           <button type="submit" class="btn btn-primary px-5 py-2"><i class="fa-solid fa-floppy-disk"></i> Guardar cambios</button>
         </div>
@@ -567,7 +462,7 @@
     function normalizePeriodos(){ const raw=configData?.periodos||[]; return raw.map((p,i)=> typeof p==='string' ? {nombre:p, activo:p===configData?.periodo_activo, habilitado:true} : {nombre:p.nombre||p.label||'', activo:!!p.activo, habilitado:p.habilitado!==false}).filter(p=>p.nombre); }
     function commitPeriodos(list){ configData.periodos=list; const active=list.find(p=>p.activo&&p.habilitado!==false)||list.find(p=>p.habilitado!==false)||list[0]; configData.periodo_activo=active?active.nombre:''; }
     function currentAcademicPeriod(){ const list=normalizePeriodos(); const active=list.find(p=>p.activo&&p.habilitado!==false); return active?.nombre || list.find(p=>p.habilitado!==false)?.nombre || configData?.periodo_activo || ''; }
-    let currentUser = null, currentProfile = null, ticketsData = [], directorioData = [], agentsData = [], notificationsData = [], invitationsData = [], secretariaTicketsData = [], secretariaUsersData = [], secretariaAuditData = [], configData = defaultConfig;
+    let currentUser = null, currentProfile = null, ticketsData = [], directorioData = [], agentsData = [], notificationsData = [], invitationsData = [], configData = defaultConfig;
     let charts = {};
     const $ = id => document.getElementById(id);
     const esc = v => String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -656,22 +551,17 @@
       {key:'directorio', tab:'tab-directorio', label:'Directorio', defaultBasic:true},
       {key:'agentes', tab:'tab-agentes', label:'Agentes', defaultBasic:false},
       {key:'periodos', tab:'tab-periodos', label:'Periodos Académicos', defaultBasic:false},
-      {key:'secretaria', tab:'tab-secretaria', label:'Atención Secretaría', defaultBasic:false},
-      {key:'auditoria', tab:'tab-auditoria', label:'Auditoría', defaultBasic:false},
       {key:'config', tab:'tab-config', label:'Configuración', defaultBasic:false}
     ];
     const ROLE_PRESETS = {
       agent: {notificaciones:true, form:true, registros:true, dashboard:false, reportes:false, informe:false, directorio:true, agentes:false, periodos:false, config:false},
       advanced: {notificaciones:true, form:true, registros:true, dashboard:true, reportes:true, informe:false, directorio:true, agentes:false, periodos:false, config:false},
       coordinator: {notificaciones:true, form:true, registros:true, dashboard:true, reportes:true, informe:true, directorio:true, agentes:false, periodos:false, config:false},
-      admin: {notificaciones:true, form:true, registros:true, dashboard:true, reportes:true, informe:true, directorio:true, agentes:true, periodos:true, secretaria:true, auditoria:true, config:true},
-      secretaria: {notificaciones:true, form:false, registros:false, dashboard:false, reportes:false, informe:false, directorio:false, agentes:false, periodos:false, secretaria:true, auditoria:false, config:false},
-      supervisora_secretaria: {notificaciones:true, form:false, registros:false, dashboard:false, reportes:false, informe:false, directorio:false, agentes:false, periodos:false, secretaria:true, auditoria:true, config:false},
-      admin_secretaria: {notificaciones:true, form:false, registros:false, dashboard:false, reportes:true, informe:false, directorio:false, agentes:false, periodos:false, secretaria:true, auditoria:true, config:false}
+      admin: {notificaciones:true, form:true, registros:true, dashboard:true, reportes:true, informe:true, directorio:true, agentes:true, periodos:true, config:true}
     };
-    const roleLabels = {admin:'Administrador', coordinator:'Coordinador', advanced:'Agente soporte avanzado', agent:'Agente básico', secretaria:'Secretaria', supervisora_secretaria:'Supervisora Secretaría', admin_secretaria:'Admin Secretaría'};
+    const roleLabels = {admin:'Administrador', coordinator:'Coordinador', advanced:'Agente soporte avanzado', agent:'Agente básico'};
     function permissionsFromRole(role){ return {...(ROLE_PRESETS[role] || ROLE_PRESETS.agent)}; }
-    function normalizeRole(role){ return ['admin','coordinator','advanced','agent','secretaria','supervisora_secretaria','admin_secretaria'].includes(role) ? role : 'agent'; }
+    function normalizeRole(role){ return ['admin','coordinator','advanced','agent'].includes(role) ? role : 'agent'; }
     function normalizePermissions(role, perms){ return {...permissionsFromRole(normalizeRole(role)), ...(perms && typeof perms === 'object' ? perms : {})}; }
     function userPermissions(){ return normalizePermissions(currentProfile?.rol, currentProfile?.permisos); }
     function hasModuleAccess(tabId){
@@ -681,7 +571,7 @@
       return !!userPermissions()[mod.key];
     }
     function firstAllowedTab(){
-      const order = ['tab-notificaciones','tab-form','tab-registros','tab-dashboard','tab-reportes','tab-informe','tab-directorio','tab-agentes','tab-periodos','tab-secretaria','tab-auditoria','tab-config'];
+      const order = ['tab-notificaciones','tab-form','tab-registros','tab-dashboard','tab-reportes','tab-informe','tab-directorio','tab-agentes','tab-periodos','tab-config'];
       return order.find(hasModuleAccess) || 'tab-form';
     }
     function permissionsSummary(perms, role){
@@ -702,7 +592,7 @@
     function showToast(message,type='success'){const c=$('toast-container');const t=document.createElement('div');t.className=`${type==='success'?'bg-instVerdeClaro':'bg-instTomate'} text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 transform transition-all duration-300 translate-x-full opacity-0 pointer-events-auto`;t.innerHTML=`<i class="fa-solid ${type==='success'?'fa-check-circle':'fa-circle-exclamation'} text-xl"></i><span class="font-medium text-sm">${esc(message)}</span>`;c.appendChild(t);setTimeout(()=>t.classList.remove('translate-x-full','opacity-0'),10);setTimeout(()=>{t.classList.add('translate-x-full','opacity-0');setTimeout(()=>t.remove(),300)},3200)}
 
     function getParamRobust(param){const url=window.location.href;const regex=new RegExp('[?&#]'+param+'=([^&#]*)','i');const match=regex.exec(url);return match?decodeURIComponent(match[1]).trim():null}
-    function isRatingRoute(){return !!getParamRobust('rate_ticket') || !!getParamRobust('rate_atencion')}
+    function isRatingRoute(){return !!getParamRobust('rate_ticket')}
     function closeRatingScreen(message='Gracias. Esta ventana ya puede cerrarse.'){ $('rating-form').classList.add('hidden'); $('rating-ticket-box').classList.add('hidden'); $('rating-error-message').classList.add('hidden'); $('rating-success-message').classList.remove('hidden'); $('rating-success-message').innerHTML=`<i class="fa-solid fa-circle-check text-5xl text-instVerdeClaro mb-4"></i><h3 class="text-xl font-bold text-gray-800">${esc(message)}</h3><p class="text-gray-600 mt-2">Puedes cerrar esta pestaña.</p>`; setTimeout(()=>{try{window.close()}catch(e){}},1600); }
 
     async function initRatingView(){ $('loading-screen').classList.remove('hidden'); $('app-container').classList.add('hidden'); $('auth-overlay').classList.add('hidden'); const ticketId=getParamRobust('rate_ticket'); const token=getParamRobust('token'); if(!ticketId||!token){$('loading-screen').classList.add('hidden');$('public-rating-view').classList.remove('hidden');$('public-rating-view').classList.add('flex');$('rating-error-message').classList.remove('hidden');$('rating-error-message').textContent='El enlace de valoración no es válido.';$('rating-form').classList.add('hidden');return}
@@ -719,24 +609,8 @@
       $('rating-form').onsubmit=async e=>{e.preventDefault(); const rating=Number($('rating-value').value); const comment=($('rating-comment').value||'').trim(); if(!rating){showToast('Selecciona una calificación','error');return} if(rating<=3 && comment.length<10){$('rating-error-message').classList.remove('hidden');$('rating-error-message').textContent='Para valoraciones de 3 estrellas o menos, ingresa una observación de al menos 10 caracteres.';$('rating-comment').focus();return} $('rating-error-message').classList.add('hidden'); $('btn-submit-rating').disabled=true; $('btn-submit-rating').innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Guardando...'; const {data:result,error:upErr}=await sbClient.rpc('submit_ticket_rating',{p_ticket_id:ticketId,p_token:token,p_calificacion:rating,p_comentario:comment}); if(upErr||!result?.success){$('rating-error-message').classList.remove('hidden');$('rating-error-message').textContent=upErr?.message||result?.message||'No se pudo guardar la valoración.';$('btn-submit-rating').disabled=false;$('btn-submit-rating').textContent='Intentar nuevamente'} else closeRatingScreen('¡Gracias por tu opinión!') };
     }
 
-
-    async function initSecretariaRatingView(){
-      $('loading-screen').classList.remove('hidden'); $('app-container').classList.add('hidden'); $('auth-overlay').classList.add('hidden');
-      const ticketId=getParamRobust('rate_atencion'); const token=getParamRobust('token');
-      $('loading-screen').classList.add('hidden'); $('public-rating-view').classList.remove('hidden'); $('public-rating-view').classList.add('flex');
-      if(!ticketId||!token){$('rating-error-message').classList.remove('hidden');$('rating-error-message').textContent='El enlace de valoración no es válido.';$('rating-form').classList.add('hidden');return}
-      const {data:ticket,error}=await sbClient.from('secretaria_tickets').select('*').eq('id',ticketId).eq('rating_token',token).maybeSingle();
-      if(error||!ticket){$('rating-error-message').classList.remove('hidden');$('rating-error-message').textContent=error?.message||'Atención no encontrada o enlace vencido.';$('rating-form').classList.add('hidden');return}
-      if(ticket.valoracion_calificacion){closeRatingScreen('Esta atención ya fue valorada.');return}
-      $('rating-ticket-id').textContent=ticket.codigo||ticket.id; $('rating-user-name').textContent=ticket.nombre||'Usuario'; $('rating-ticket-subject').textContent=ticket.asunto||'la atención recibida';
-      const stars=document.querySelectorAll('.star-rating i'); const texts=['Malo','Regular','Bueno','Muy Bueno','Excelente'];
-      stars.forEach(star=>{star.onclick=e=>{const val=Number(e.target.dataset.value);$('rating-value').value=val;$('rating-text').textContent=texts[val-1];stars.forEach((s,i)=>s.classList.toggle('active',i<val));}});
-      $('rating-form').onsubmit=async e=>{e.preventDefault(); const rating=Number($('rating-value').value); const comment=($('rating-comment').value||'').trim(); if(!rating)return showToast('Selecciona una calificación','error'); if(rating<=3 && comment.length<10)return showToast('Para 3 estrellas o menos, la observación es obligatoria.','error'); $('btn-submit-rating').disabled=true; $('btn-submit-rating').innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Guardando...'; const {error:upErr}=await sbClient.from('secretaria_tickets').update({valoracion_calificacion:rating,valoracion_comentario:comment,valoracion_fecha:new Date().toISOString(),rating_token:null}).eq('id',ticketId).eq('rating_token',token); if(upErr){$('rating-error-message').classList.remove('hidden');$('rating-error-message').textContent=upErr.message;$('btn-submit-rating').disabled=false;$('btn-submit-rating').textContent='Intentar nuevamente'} else closeRatingScreen('¡Gracias por tu opinión!') };
-    }
-
     async function initApp(){
       try {
-        if(getParamRobust('rate_atencion')){ await initSecretariaRatingView(); return }
         if(isRatingRoute()){ await initRatingView(); return }
         const {data:{session}} = await withTimeout(sbClient.auth.getSession(), 15000, 'Validación de sesión');
         if(session){
@@ -804,7 +678,6 @@
       await safeLoad('Tickets', loadTickets);
       await safeLoad('Agentes', loadAgents);
       await safeLoad('Notificaciones', loadNotifications);
-      await safeLoad('Atención Secretaría', loadSecretariaData);
       if(isAdmin()) await safeLoad('Invitaciones', loadInvitations);
       try { actualizarSelectsConfig(); renderDirectorio(); renderTickets(); renderAgents(); renderNotifications(); renderInvitations(); updateNotificationBadge(); populateDashboardFilters(); renderDashboard(); populateInformeFilters(); renderInformePreview(); }
       catch(e){ console.error('Render inicial', e); showToast(`Vista inicial: ${e.message}`,'error'); }
@@ -844,9 +717,6 @@
     }
     async function loadTickets(){ const {data,error}=await sbClient.from('tickets').select('*').order('created_at',{ascending:false}); if(error) throw new Error(error.message); ticketsData=data||[]; }
     async function loadAgents(){ const {data,error}=await sbClient.from('agentes').select('*').order('created_at',{ascending:false}); if(error) throw new Error(error.message); agentsData=data||[]; }
-    async function loadSecretariaData(){
-      try{ const [t,u,a]=await Promise.all([sbClient.from('secretaria_tickets').select('*').order('created_at',{ascending:false}).limit(500), sbClient.from('secretaria_usuarios').select('*').order('activo',{ascending:false}).order('nombre',{ascending:true}), sbClient.from('secretaria_auditoria').select('*').order('created_at',{ascending:false}).limit(100)]); if(t.error) throw t.error; secretariaTicketsData=t.data||[]; secretariaUsersData=u.data||[]; secretariaAuditData=a.data||[]; }catch(e){ console.warn('Módulo Secretaría no disponible hasta ejecutar SQL_MIGRACION_SECRETARIA_ATENCION.sql', e); secretariaTicketsData=[]; secretariaUsersData=[]; secretariaAuditData=[]; }
-    }
     async function loadNotifications(){ if(!currentProfile?.id){notificationsData=[];return;} const {data,error}=await sbClient.from('notificaciones').select('*').eq('agent_id',currentProfile.id).order('created_at',{ascending:false}).limit(100); if(error){ console.warn('No se pudieron cargar notificaciones', error); notificationsData=[]; return; } notificationsData=data||[]; updateNotificationBadge(); }
     async function loadInvitations(){ if(!isAdmin()){ invitationsData=[]; return; } const {data,error}=await sbClient.from('invitaciones_agentes').select('*').order('created_at',{ascending:false}).limit(50); if(error){ console.warn('No se pudieron cargar invitaciones', error); invitationsData=[]; return; } invitationsData=data||[]; }
 
@@ -886,7 +756,7 @@
     async function logout(){ await sbClient.auth.signOut(); location.reload(); }
     window.logout=logout;
 
-    function switchTab(tabId){ if(!hasModuleAccess(tabId)){ showToast('No tienes permiso para acceder a este módulo','error'); tabId=firstAllowedTab(); } document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active')); $(tabId).classList.add('active'); document.querySelectorAll('.nav-btn').forEach(b=>{b.classList.remove('bg-instVerdeClaro','text-instVerdeOscuro','shadow-md');b.classList.add('hover:bg-white/10','text-white')}); const btn=$('btn-'+tabId); if(btn){btn.classList.remove('hover:bg-white/10','text-white');btn.classList.add('bg-instVerdeClaro','text-instVerdeOscuro','shadow-md')} if(tabId==='tab-dashboard'){populateDashboardFilters();renderDashboard()} if(tabId==='tab-informe'){populateInformeFilters();renderInformePreview()} if(tabId==='tab-notificaciones'){loadNotifications().then(renderNotifications)} if(tabId==='tab-agentes'&&isAdmin()){loadInvitations().then(renderInvitations)} if(tabId==='tab-secretaria'){loadSecretariaData().then(renderSecretariaModule)} if(tabId==='tab-auditoria'){loadAuditoriaGeneral().then(renderAuditoriaGeneral)} applyRoleAccess(); }
+    function switchTab(tabId){ if(!hasModuleAccess(tabId)){ showToast('No tienes permiso para acceder a este módulo','error'); tabId=firstAllowedTab(); } document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active')); $(tabId).classList.add('active'); document.querySelectorAll('.nav-btn').forEach(b=>{b.classList.remove('bg-instVerdeClaro','text-instVerdeOscuro','shadow-md');b.classList.add('hover:bg-white/10','text-white')}); const btn=$('btn-'+tabId); if(btn){btn.classList.remove('hover:bg-white/10','text-white');btn.classList.add('bg-instVerdeClaro','text-instVerdeOscuro','shadow-md')} if(tabId==='tab-dashboard'){populateDashboardFilters();renderDashboard()} if(tabId==='tab-informe'){populateInformeFilters();renderInformePreview()} if(tabId==='tab-notificaciones'){loadNotifications().then(renderNotifications)} if(tabId==='tab-agentes'&&isAdmin()){loadInvitations().then(renderInvitations)} applyRoleAccess(); }
     window.switchTab=switchTab; window.toggleMobileMenu=()=>{const s=document.querySelector('aside');s.classList.toggle('hidden');s.classList.toggle('absolute');s.classList.toggle('h-full');s.classList.toggle('z-50')};
 
     $('search-user').addEventListener('input',e=>{ const term=e.target.value.toLowerCase(); const box=$('search-results'); if(term.length<2){box.classList.add('hidden');return} const matches=directorioData.filter(u=>(u.nombres||'').toLowerCase().includes(term)||(u.cedula||'').includes(term)).slice(0,8); box.innerHTML=matches.length?matches.map(u=>`<li data-id="${u.id}" class="p-3 hover:bg-gray-50 cursor-pointer border-b text-sm"><div class="font-semibold text-instVerdeOscuro">${esc(u.nombres)}</div><div class="text-xs text-gray-500">C.I: ${esc(u.cedula)} | ${esc(u.tipo)}</div></li>`).join(''):'<li class="p-3 text-sm text-gray-500 text-center">No encontrado</li>'; box.querySelectorAll('li[data-id]').forEach(li=>li.onclick=()=>seleccionarUsuario(directorioData.find(u=>u.id===li.dataset.id))); box.classList.remove('hidden'); });
@@ -957,85 +827,19 @@
     }
     async function markNotificationRead(id){ const {error}=await sbClient.from('notificaciones').update({leido:true,read_at:new Date().toISOString()}).eq('id',id); if(error)return showToast(error.message,'error'); await loadNotifications(); renderNotifications(); }
     async function markAllNotificationsRead(){ const ids=notificationsData.filter(n=>!n.leido).map(n=>n.id); if(!ids.length)return showToast('No hay notificaciones pendientes'); const {error}=await sbClient.from('notificaciones').update({leido:true,read_at:new Date().toISOString()}).in('id',ids); if(error)return showToast(error.message,'error'); await loadNotifications(); renderNotifications(); showToast('Notificaciones marcadas como leídas'); }
-    async function openNotificationTicket(notifId,ticketId){
-      await markNotificationRead(notifId);
-      try{ await loadTickets(); renderTickets(); }catch(e){ console.warn('No se pudo refrescar tickets antes de abrir notificación', e); }
-      const t=ticketsData.find(x=>x.id===ticketId || x.id_str===ticketId);
-      switchTab('tab-registros');
-      if($('filter-tickets')){
-        $('filter-tickets').value=t?.id_str || ticketId || '';
-        renderTickets();
-      }
-      setTimeout(()=>{
-        if(t){
-          abrirModalEditarTicket(t.id);
-          showToast('Ticket cargado para revisión o resolución.');
-        } else {
-          showToast('No se encontró el ticket transferido. Actualiza Registros e intenta nuevamente.','error');
-        }
-      },300);
-    }
+    async function openNotificationTicket(notifId,ticketId){ await markNotificationRead(notifId); switchTab('tab-registros'); setTimeout(()=>abrirModalHistorialTicket(ticketId),250); }
     window.renderNotifications=renderNotifications; window.markNotificationRead=markNotificationRead; window.markAllNotificationsRead=markAllNotificationsRead; window.openNotificationTicket=openNotificationTicket;
 
-    function isTicketFromSecretaria(t){
-      return !!(t && (String(t.id_str||'').startsWith('TKT-SEC-') || String(t.canal||'').toLowerCase()==='secretaría' || String(t.canal||'').toLowerCase()==='secretaria' || String(t.asunto||'').startsWith('[Secretaría]') || String(t.descripcion||'').includes('Código Secretaría:')));
-    }
     function abrirModalEditarTicket(id){
       const t=ticketsData.find(x=>x.id===id); if(!t)return;
       $('edit-ticket-id').value=t.id; $('edit-ticket-title').textContent=t.id_str||''; $('edit-asunto').value=t.asunto||''; $('edit-estado').value=t.estado||'Requiere Seguimiento';
       fillConfigSelect('edit-categoria',configData.categorias||[],t.categoria); fillConfigSelect('edit-canal',configData.canales||[],t.canal);
       $('edit-subcategoria').value=t.subcategoria||''; $('edit-prioridad').value=t.prioridad||'Media'; $('edit-descripcion').value=t.descripcion||''; $('edit-comentario').value='';
       $('edit-assigned-agent').innerHTML=agentOptions(agentId(t)); $('edit-tiempo').value=t.estado==='Resuelto'?formatMinutes(ticketResolutionMinutes(t)):'En proceso';
-      const btnDev=$('btn-devolver-secretaria');
-      if(btnDev){
-        const alreadyClosed = ['Resuelto','Cancelado'].includes(t.estado);
-        btnDev.classList.toggle('hidden', !isTicketFromSecretaria(t) || alreadyClosed);
-      }
       $('modal-editar-ticket').classList.add('flex');
     }
     function cerrarModalEditarTicket(){ $('modal-editar-ticket').classList.remove('flex'); }
     window.abrirModalEditarTicket=abrirModalEditarTicket; window.cerrarModalEditarTicket=cerrarModalEditarTicket;
-
-    async function devolverTicketASecretariaDesdeIT(){
-      const id=$('edit-ticket-id')?.value;
-      const it=ticketsData.find(x=>x.id===id);
-      if(!it) return showToast('No se encontró el ticket IT seleccionado.','error');
-      if(!isTicketFromSecretaria(it)) return showToast('Este ticket no proviene de Secretaría.','error');
-      const comentario=($('edit-comentario')?.value||'').trim();
-      if(!confirm('¿Devolver este ticket a Secretaría como solucionado por Soporte IT?')) return;
-      const now=new Date().toISOString();
-      const itPayload={
-        estado:'Resuelto',
-        resolved_at:now,
-        resolution_minutes:ticketResolutionMinutes(it) ?? minutesBetween(it.created_at,now) ?? 0,
-        last_status_change_at:now,
-        rating_token:null
-      };
-      const {error:itErr}=await sbClient.from('tickets').update(itPayload).eq('id',it.id);
-      if(itErr) return showToast('No se pudo cerrar el ticket IT: '+itErr.message,'error');
-      await registrarSeguimiento(it.id,{accion:'Devolución a Secretaría',estado_anterior:it.estado,estado_nuevo:'Resuelto',comentario:comentario||'Soporte IT solucionó el requerimiento y lo devuelve a Secretaría para cierre/valoración.'},false);
-      let secUpdated=false;
-      try{
-        const {data:secTickets,error:secFindErr}=await sbClient.from('secretaria_tickets').select('*').eq('it_ticket_id',it.id).limit(1);
-        if(secFindErr) throw secFindErr;
-        const sec=secTickets && secTickets[0];
-        if(sec){
-          const secPayload={estado:'Resuelto',rating_token:sec.rating_token||randomToken(),descripcion:`${sec.descripcion||''}
-
-Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}`.trim()};
-          const {error:secErr}=await sbClient.from('secretaria_tickets').update(secPayload).eq('id',sec.id);
-          if(secErr) throw secErr;
-          await sbClient.from('secretaria_historial').insert({ticket_id:sec.id,accion:'Devuelto por Soporte IT',estado_anterior:sec.estado,estado_nuevo:'Resuelto',secretaria_origen:sec.secretaria_nombre,secretaria_destino:sec.secretaria_nombre,comentario:`Ticket IT ${it.id_str||''} resuelto y devuelto a Secretaría. ${comentario||''}`,created_by:currentProfile?.nombre_completo||currentUser?.email||'Soporte IT'});
-          await secAudit('Devuelto por Soporte IT','secretaria_tickets',sec.id,sec,secPayload);
-          secUpdated=true;
-        }
-      }catch(e){ console.warn('No se pudo actualizar atención de Secretaría', e); }
-      cerrarModalEditarTicket();
-      await loadTickets(); renderTickets();
-      try{ await loadSecretariaData(); renderSecretariaModule(); }catch(e){}
-      showToast(secUpdated?'Ticket resuelto y devuelto a Secretaría.':'Ticket IT resuelto. No se encontró la atención vinculada en Secretaría.');
-    }
-    window.devolverTicketASecretariaDesdeIT=devolverTicketASecretariaDesdeIT;
 
     $('form-editar-ticket').onsubmit=async e=>{
       e.preventDefault();
@@ -1047,8 +851,8 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       if(agentChanged) payload.assigned_at=now;
       if(statusChanged) payload.last_status_change_at=now;
       if(newEstado==='Resuelto' && old.estado!=='Resuelto') { payload.resolved_at=now; payload.resolution_minutes=minutesBetween(old.created_at,now)??0; payload.rating_token=old.rating_token||randomToken(); }
-      if(newEstado==='Cancelado') { payload.resolved_at=null; payload.resolution_minutes=null; payload.rating_token=null; }
-      if(newEstado!=='Resuelto' && old.estado==='Resuelto') { payload.resolved_at=null; payload.resolution_minutes=null; payload.rating_token=null; }
+      if(newEstado==='Cancelado') { payload.resolved_at=null; payload.resolution_minutes=null; payload.rating_token=null; payload.rating_token_expires_at=null; }
+      if(newEstado!=='Resuelto' && old.estado==='Resuelto') { payload.resolved_at=null; payload.resolution_minutes=null; payload.rating_token=null; payload.rating_token_expires_at=null; }
       const {error}=await sbClient.from('tickets').update(payload).eq('id',id);
       if(error)return showToast(error.message,'error');
       const cambios=[]; if(statusChanged)cambios.push(`estado: ${old.estado} -> ${newEstado}`); if(agentChanged)cambios.push(`agente: ${agentName(old)} -> ${payload.assigned_agent_name||'Sin asignar'}`);
@@ -1709,7 +1513,7 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       $('list-canales').innerHTML=cans.map((c,i)=>`<span class="bg-gray-100 text-sm px-3 py-1 rounded-full flex items-center gap-2 border">${esc(c)} <i onclick="removeConfigItem('canales',${i})" class="fa-solid fa-xmark text-red-500 cursor-pointer"></i></span>`).join('');
       if($('periodo-activo-import-label')) $('periodo-activo-import-label').textContent=currentAcademicPeriod()||'Sin definir';
       if($('dir-periodo') && !$('dir-periodo').value) $('dir-periodo').placeholder='Periodo: '+(currentAcademicPeriod()||'');
-      renderPeriodosAcademicos(); if(typeof renderSecretariaModule==='function') renderSecretariaModule();
+      renderPeriodosAcademicos();
     }
     async function saveConfig(){ const {error}=await sbClient.from('app_config').upsert({id:1,config:configData,updated_by:currentProfile?.id||null}); if(error)showToast(error.message,'error'); }
     async function addConfigItem(t,id){ const val=$(id).value.trim(); if(!val)return; configData[t]=configData[t]||[]; if(!configData[t].includes(val))configData[t].push(val); await saveConfig(); $(id).value=''; actualizarSelectsConfig(); populateDashboardFilters(); }
@@ -1794,211 +1598,6 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       if(formato==='docx'){ if(window.htmlDocx&&window.htmlDocx.asBlob){ const blob=window.htmlDocx.asBlob(html); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fname+'.docx'; a.click(); URL.revokeObjectURL(a.href); return showToast('Reporte Word del Dashboard generado'); } download(fname+'.doc',html,'application/msword'); return showToast('No cargó DOCX; se descargó Word HTML'); }
     }
     window.exportarDashboardReporte=exportarDashboardReporte;
-
-
-
-    function secCodigo(){ return 'AT-'+String(Math.floor(Math.random()*99999)+1).padStart(5,'0'); }
-    function normalizeTextForSearch(value){
-      return String(value||'')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g,'')
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g,' ')
-        .trim();
-    }
-    function periodLooksLikeActive(studentPeriod, activePeriod){
-      const sp=normalizeTextForSearch(studentPeriod);
-      const ap=normalizeTextForSearch(activePeriod);
-      if(!ap) return true;
-      if(!sp) return true;
-      if(sp===ap || sp.includes(ap) || ap.includes(sp)) return true;
-      const hasAbrSep = /abr|abril/.test(sp) && /sep|septiembre/.test(sp) && /abr|abril/.test(ap) && /sep|septiembre/.test(ap);
-      const hasOctMar = /oct|octubre/.test(sp) && /mar|marzo/.test(sp) && /oct|octubre/.test(ap) && /mar|marzo/.test(ap);
-      return hasAbrSep || hasOctMar;
-    }
-    function isStudentRow(u){ return normalizeTextForSearch(u?.tipo).includes('estudiante'); }
-    function secStudentOptions(term=''){
-      const periodo=currentAcademicPeriod();
-      const q=normalizeTextForSearch(term);
-      const base=directorioData.filter(isStudentRow);
-      let periodRows=base.filter(u=>periodLooksLikeActive(u.periodo, periodo));
-      if(periodRows.length===0) periodRows=base;
-      const rows=periodRows.filter(u=>!q || [u.cedula,u.nombres,u.correo,u.carrera,u.nivel,u.periodo].some(v=>normalizeTextForSearch(v).includes(q)));
-      return rows.slice(0,120);
-    }
-    function fillSecStudentManualFields(){
-      const st=directorioData.find(u=>String(u.id)===$('sec-student')?.value);
-      if(!st) return;
-      if($('sec-nombre')) $('sec-nombre').value=st.nombres||'';
-      if($('sec-cedula')) $('sec-cedula').value=st.cedula||'';
-      if($('sec-correo')) $('sec-correo').value=st.correo||'';
-    }
-
-    function renderSecretariaModule(){
-      if(!$('tab-secretaria')) return;
-      const warn=$('sec-sql-warning'); if(warn) warn.classList.toggle('hidden', secretariaTicketsData.length || secretariaUsersData.length || secretariaAuditData.length);
-      const total=secretariaTicketsData.length, res=secretariaTicketsData.filter(t=>t.estado==='Resuelto').length, trans=secretariaTicketsData.filter(t=>t.transferido_it).length, abiertos=secretariaTicketsData.filter(t=>!['Resuelto','Cancelado'].includes(t.estado)).length;
-      const ratings=secretariaTicketsData.map(t=>t.valoracion_calificacion).filter(Boolean);
-      if($('sec-kpi-total')) $('sec-kpi-total').textContent=total;
-      if($('sec-kpi-abiertos')) $('sec-kpi-abiertos').textContent=abiertos;
-      if($('sec-kpi-resueltos')) $('sec-kpi-resueltos').textContent=res;
-      if($('sec-kpi-transferidos')) $('sec-kpi-transferidos').textContent=trans;
-      if($('sec-kpi-rating')) $('sec-kpi-rating').textContent=ratings.length?(ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1):'0.0';
-      const studentSel=$('sec-student'); if(studentSel){ const opts=secStudentOptions($('sec-search-student')?.value||''); studentSel.innerHTML='<option value="">-- Atención externa o manual --</option>'+opts.map(u=>`<option value="${esc(u.id)}">${esc(u.cedula)} - ${esc(u.nombres)} - ${esc(u.periodo||'')}</option>`).join(''); }
-      const secSel=$('sec-secretaria'); if(secSel) secSel.innerHTML='<option value="">Sin asignar</option>'+secretariaUsersData.filter(s=>s.activo!==false).map(s=>`<option value="${esc(s.id)}">${esc(s.nombre)} · ${esc(s.rol)}</option>`).join('');
-      const body=$('sec-tickets-body'); if(body){ const q=($('sec-filter')?.value||'').toLowerCase(); const rows=secretariaTicketsData.filter(t=>!q||[t.codigo,t.nombre,t.cedula,t.asunto,t.categoria,t.estado,t.secretaria_nombre].some(v=>String(v||'').toLowerCase().includes(q))); body.innerHTML=rows.map(t=>{const url=`${appBaseUrl()}#rate_atencion=${t.id}&token=${t.rating_token||''}`; const wa='https://wa.me/?text='+encodeURIComponent('Por favor valore la atención recibida: '+url); const mail='mailto:?subject=Valoración de atención&body='+encodeURIComponent('Por favor valore la atención recibida: '+url); return `<tr class="border-t hover:bg-gray-50"><td class="px-4 py-3"><b class="text-instVerdeOscuro">${esc(t.codigo)}</b><div class="text-xs text-gray-500">${esc(formatDateTimeEcuador(t.created_at))}</div></td><td class="px-4 py-3">${esc(t.nombre)}<div class="text-xs text-gray-500">${esc(t.usuario_tipo)} · ${esc(t.cedula||'')}</div></td><td class="px-4 py-3">${esc(t.asunto)}<div class="text-xs text-gray-500">${esc(t.categoria||'')}</div></td><td class="px-4 py-3"><b>${esc(t.secretaria_nombre||'Sin asignar')}</b>${t.secretaria_nombre?`<div class="text-xs text-green-600">${esc(t.codigo)} asignado a ${esc(t.secretaria_nombre)}</div>`:''}</td><td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-bold ${t.estado==='Resuelto'?'bg-green-100 text-green-700':t.estado==='Cancelado'?'bg-gray-100 text-gray-600':'bg-orange-100 text-orange-700'}">${esc(t.estado)}</span>${t.transferido_it?'<div class="text-xs text-blue-600 font-bold">Transferido a IT</div>':''}</td><td class="px-4 py-3 text-center whitespace-nowrap"><button onclick='openSecEdit(${JSON.stringify(t).replaceAll("'","&#39;")})' class="text-blue-600 mx-1"><i class="fa-solid fa-pen"></i></button>${t.rating_token?`<button onclick="navigator.clipboard.writeText('${url}');showToast('URL de valoración copiada')" class="text-yellow-500 mx-1"><i class="fa-solid fa-star"></i></button><a href="${wa}" target="_blank" class="text-green-600 mx-1"><i class="fa-brands fa-whatsapp"></i></a><a href="${mail}" class="text-blue-500 mx-1"><i class="fa-solid fa-envelope"></i></a>`:''}<button onclick="deleteSecTicket('${t.id}')" class="text-red-600 mx-1"><i class="fa-solid fa-trash"></i></button></td></tr>`}).join('')||'<tr><td colspan="6" class="p-8 text-center text-gray-400">No hay atenciones registradas.</td></tr>'; }
-      const users=$('sec-users-list'); if(users){ users.innerHTML=secretariaUsersData.map(u=>`<div class="border rounded-xl p-3"><div class="flex justify-between gap-2"><div><b class="text-instVerdeOscuro">${esc(u.nombre)}</b><p class="text-xs text-gray-500">${esc(u.email||'')} · ${esc(u.rol)}</p></div><span class="text-xs px-2 py-1 rounded-full ${u.activo?'bg-green-100 text-green-700':'bg-gray-100 text-gray-500'}">${u.activo?'Activo':'Inactivo'}</span></div><div class="mt-2 flex gap-2"><button onclick='editSecUser(${JSON.stringify(u).replaceAll("'","&#39;")})' class="text-blue-600 text-sm font-bold">Editar</button><button onclick="toggleSecUser('${u.id}',${u.activo?false:true})" class="text-orange-600 text-sm font-bold">${u.activo?'Inactivar':'Activar'}</button><button onclick="copySecAccessLink('${u.id}')" class="text-green-600 text-sm font-bold">Acceso</button><button onclick="deleteSecUser('${u.id}')" class="text-red-600 text-sm font-bold">Eliminar</button></div></div>`).join('')||'<p class="text-gray-400">No hay secretarias registradas.</p>'; }
-      const audit=$('sec-audit-list'); if(audit){ audit.innerHTML=secretariaAuditData.slice(0,20).map(a=>`<div class="border-b pb-2"><b>${esc(a.accion)}</b> <span class="text-gray-500">${esc(a.modulo)} #${esc(a.registro_id||'')}</span><br><span class="text-xs text-gray-500">${esc(formatDateTimeEcuador(a.created_at))} · ${esc(a.usuario_nombre||'')}</span></div>`).join('')||'<p class="text-gray-400">Sin auditoría registrada.</p>'; }
-    }
-    document.addEventListener('input', e=>{ if(e.target?.id==='sec-search-student') renderSecretariaModule(); if(e.target?.id==='sec-filter') renderSecretariaModule(); });
-    document.addEventListener('change', e=>{ if(e.target?.id==='sec-student') fillSecStudentManualFields(); });
-    document.addEventListener('submit', async e=>{
-      if(e.target?.id==='sec-form-user'){ e.preventDefault(); const id=$('sec-user-id').value; const payload={nombre:$('sec-user-name').value,email:$('sec-user-email').value,rol:$('sec-user-role').value,activo:$('sec-user-active').checked}; let res; if(id) res=await sbClient.from('secretaria_usuarios').update(payload).eq('id',id); else res=await sbClient.from('secretaria_usuarios').insert(payload); if(res.error) return showToast(res.error.message,'error'); await syncSecretariaAccessProfile(payload); await secAudit(id?'Editar perfil Secretaría':'Crear perfil Secretaría','secretaria_usuarios',id||null,null,payload); e.target.reset(); $('sec-user-id').value=''; await loadSecretariaData(); renderSecretariaModule(); showToast('Perfil de Secretaría guardado'); }
-      if(e.target?.id==='sec-form-ticket'){ e.preventDefault(); const st=directorioData.find(u=>String(u.id)===$('sec-student').value); const sec=secretariaUsersData.find(u=>String(u.id)===$('sec-secretaria').value); const payload={codigo:secCodigo(),usuario_tipo:$('sec-user-type').value,estudiante_id:st?.id||null,cedula:st?.cedula||$('sec-cedula').value,nombre:st?.nombres||$('sec-nombre').value,correo:st?.correo||$('sec-correo').value,whatsapp:$('sec-whatsapp').value,canal:$('sec-canal').value,asunto:$('sec-asunto').value,categoria:$('sec-categoria').value,descripcion:$('sec-descripcion').value,estado:'Abierto',secretaria_id:sec?.id||null,secretaria_nombre:sec?.nombre||'',rating_token:randomToken(),created_by:currentProfile?.id||null}; if(!payload.nombre||!payload.asunto) return showToast('Complete usuario y requerimiento','error'); const {data,error}=await sbClient.from('secretaria_tickets').insert(payload).select().single(); if(error) return showToast(error.message,'error'); await sbClient.from('secretaria_historial').insert({ticket_id:data.id,accion:'Creación',estado_nuevo:'Abierto',secretaria_destino:payload.secretaria_nombre,comentario:'Atención registrada',created_by:currentProfile?.nombre_completo||currentUser?.email}); await secAudit('Crear atención','secretaria_tickets',data.id,null,payload); e.target.reset(); await loadSecretariaData(); renderSecretariaModule(); showToast(`${payload.codigo} asignado a ${payload.secretaria_nombre||'sin asignar'}`); }
-    });
-    async function secAudit(accion,modulo,registro,antes,despues){ try{ await sbClient.from('secretaria_auditoria').insert({usuario_id:currentProfile?.id||null,usuario_nombre:currentProfile?.nombre_completo||currentUser?.email||'',accion,modulo,registro_id:registro,datos_antes:antes,datos_despues:despues}); }catch(e){ console.warn('Auditoría Secretaría no disponible', e); } }
-    function editSecUser(u){ $('sec-user-id').value=u.id; $('sec-user-name').value=u.nombre||''; $('sec-user-email').value=u.email||''; $('sec-user-role').value=u.rol||'secretaria'; $('sec-user-active').checked=u.activo!==false; switchTab('tab-secretaria'); }
-    async function toggleSecUser(id,activo){ const {error}=await sbClient.from('secretaria_usuarios').update({activo}).eq('id',id); if(error)return showToast(error.message,'error'); await secAudit(activo?'Activar secretaria':'Inactivar secretaria','secretaria_usuarios',id,null,{activo}); await loadSecretariaData(); renderSecretariaModule(); }
-    async function deleteSecUser(id){ if(!confirm('¿Eliminar perfil de Secretaría?'))return; const old=secretariaUsersData.find(u=>String(u.id)===String(id)); const {error}=await sbClient.from('secretaria_usuarios').delete().eq('id',id); if(error)return showToast(error.message,'error'); await secAudit('Eliminar perfil Secretaría','secretaria_usuarios',id,old,null); await loadSecretariaData(); renderSecretariaModule(); }
-    window.editSecUser=editSecUser; window.toggleSecUser=toggleSecUser; window.deleteSecUser=deleteSecUser;
-    function ensureSecEditModal(){
-      if($('modal-sec-edit')) return;
-      const wrap=document.createElement('div');
-      wrap.id='modal-sec-edit';
-      wrap.className='modal fixed inset-0 bg-black/50 z-[160] items-center justify-center p-4';
-      wrap.innerHTML=`<div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto">
-        <div class="p-6 border-b flex items-start justify-between gap-3">
-          <div><h2 class="text-xl font-bold text-instVerdeOscuro">Atender requerimiento <span id="sec-edit-code" class="text-instPlomo"></span></h2><p class="text-xs text-gray-500">Cambia el estado desde el combo, reasigna secretaria, registra comentario y deja auditoría del cambio.</p></div>
-          <button type="button" onclick="closeSecEditModal()" class="text-gray-400 hover:text-red-500 text-2xl"><i class="fa-solid fa-xmark"></i></button>
-        </div>
-        <form id="sec-edit-form" class="p-6 space-y-4">
-          <input type="hidden" id="sec-edit-id">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label class="block text-sm font-semibold mb-1">Requerimiento</label><input id="sec-edit-asunto" class="field"></div>
-            <div><label class="block text-sm font-semibold mb-1">Estado</label><select id="sec-edit-estado" class="field"><option>Abierto</option><option>En Proceso</option><option>Pendiente Usuario</option><option>Resuelto</option><option>Cancelado</option><option>Transferido a IT</option></select></div>
-            <div><label class="block text-sm font-semibold mb-1">Secretaria asignada</label><select id="sec-edit-secretaria" class="field"></select></div>
-            <div><label class="block text-sm font-semibold mb-1">Canal</label><select id="sec-edit-canal" class="field"><option>Presencial</option><option>WhatsApp</option><option>Correo</option><option>Teams</option><option>Teléfono</option></select></div>
-          </div>
-          <div><label class="block text-sm font-semibold mb-1">Detalle / descripción</label><textarea id="sec-edit-descripcion" rows="3" class="field resize-none"></textarea></div>
-          <div><label class="block text-sm font-semibold mb-1">Comentario de seguimiento / motivo</label><textarea id="sec-edit-comentario" rows="3" class="field resize-none" placeholder="Ejemplo: requerimiento resuelto, cancelado por duplicado o transferido a IT por soporte técnico."></textarea></div>
-          <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700"><b>Estados disponibles:</b> Abierto, En Proceso, Pendiente Usuario, Resuelto, Cancelado y Transferido a IT. Ya no se escribe el estado manualmente.</div>
-          <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t"><button type="button" onclick="closeSecEditModal()" class="btn btn-muted px-4 py-2">Cancelar</button><button type="submit" class="btn btn-green px-5 py-2"><i class="fa-solid fa-floppy-disk"></i> Guardar cambios</button></div>
-        </form>
-      </div>`;
-      document.body.appendChild(wrap);
-      $('sec-edit-form').onsubmit=saveSecEditFromModal;
-    }
-
-    async function crearTicketITDesdeSecretaria(secTicket, updatePayload, comentario){
-      if(!secTicket || secTicket.it_ticket_id || secTicket._itTicketCreated) return null;
-      const now=new Date();
-      const candidatos=activeAgents().filter(a=>{
-        const role=normalizeRole(a.rol);
-        const perms=normalizePermissions(a.rol,a.permisos);
-        return a.activo!==false && (['admin','advanced','coordinator'].includes(role) || perms.registros || perms.form);
-      });
-      const assigned=candidatos.find(a=>normalizeRole(a.rol)==='admin') || candidatos[0] || currentProfile;
-      const itTicket={
-        id_str:'TKT-SEC-'+String(secTicket.codigo||Math.floor(Math.random()*100000)).replace(/[^0-9A-Za-z-]/g,'').slice(-8),
-        fecha_texto:nowEcuador(),
-        agente_id:currentProfile?.id||null,
-        agente_nombre:`Secretaría / ${currentProfile?.nombre_completo||currentUser?.email||''}`,
-        assigned_agent_id:assigned?.id||null,
-        assigned_agent_name:assigned?.nombre_completo||assigned?.email||'Soporte IT',
-        assigned_at:now.toISOString(),
-        last_status_change_at:now.toISOString(),
-        usuario_id:secTicket.estudiante_id||null,
-        usuario_cedula:secTicket.cedula||'',
-        usuario_nombre:secTicket.nombre||'',
-        asunto:`[Secretaría] ${updatePayload?.asunto||secTicket.asunto||'Requerimiento transferido'}`,
-        categoria:'Derivación a IT',
-        subcategoria:secTicket.categoria||'Atención Secretaría',
-        prioridad:'Media',
-        canal:'Secretaría',
-        descripcion:`Transferido desde Atención Secretaría.\n\nCódigo Secretaría: ${secTicket.codigo||''}\nUsuario: ${secTicket.nombre||''} ${secTicket.cedula?`(${secTicket.cedula})`:''}\nCorreo: ${secTicket.correo||''}\nWhatsApp: ${secTicket.whatsapp||''}\nRequerimiento: ${secTicket.asunto||''}\nDetalle: ${updatePayload?.descripcion||secTicket.descripcion||''}\nMotivo/comentario: ${comentario||'Requiere revisión de Soporte IT.'}`,
-        estado:'Requiere Seguimiento',
-        rating_token:null
-      };
-      let created=null;
-      const {data,error}=await sbClient.from('tickets').insert(itTicket).select().single();
-      if(error){
-        console.warn('No se pudo crear ticket IT desde Secretaría', error);
-        showToast('La atención quedó transferida, pero no se pudo crear el ticket IT: '+error.message,'error');
-        return null;
-      }
-      created=data;
-      await registrarSeguimiento(created.id,{accion:'Transferencia desde Secretaría',estado_nuevo:'Requiere Seguimiento',comentario:`Ticket generado desde ${secTicket.codigo||'Atención Secretaría'}. ${comentario||''}`,agente_destino_id:itTicket.assigned_agent_id,agente_destino_nombre:itTicket.assigned_agent_name},false);
-      try{
-        await sbClient.from('secretaria_tickets').update({it_ticket_id:created.id}).eq('id',secTicket.id);
-      }catch(e){ console.warn('No se pudo asociar it_ticket_id', e); }
-      const recipients=(candidatos.length?candidatos:[assigned]).filter(Boolean);
-      const unique=[...new Map(recipients.map(a=>[a.id,a])).values()];
-      for(const a of unique){
-        try{
-          await sbClient.from('notificaciones').insert({
-            agent_id:a.id,
-            ticket_id:created.id,
-            tipo:'secretaria_transferencia',
-            titulo:`Transferencia Secretaría: ${created.id_str}`,
-            mensaje:`${secTicket.codigo||'Una atención'} fue transferida desde Secretaría a Soporte IT. Usuario: ${secTicket.nombre||''}. Requerimiento: ${secTicket.asunto||''}.`,
-            created_by:currentProfile?.id||null,
-            created_by_nombre:currentProfile?.nombre_completo||currentUser?.email||'',
-            data:{origen:'secretaria',secretaria_codigo:secTicket.codigo,it_ticket_id:created.id,it_ticket_id_str:created.id_str,asunto:created.asunto}
-          });
-        }catch(e){ console.warn('No se pudo notificar agente IT', a?.id, e); }
-      }
-      await loadNotifications(); updateNotificationBadge();
-      return created;
-    }
-
-    function closeSecEditModal(){ const m=$('modal-sec-edit'); if(m) m.classList.remove('flex'); }
-    function openSecEdit(t){
-      ensureSecEditModal();
-      $('sec-edit-id').value=t.id;
-      $('sec-edit-code').textContent=t.codigo||'';
-      $('sec-edit-asunto').value=t.asunto||'';
-      $('sec-edit-estado').value=t.transferido_it?'Transferido a IT':(t.estado||'Abierto');
-      $('sec-edit-canal').value=t.canal||'Presencial';
-      $('sec-edit-descripcion').value=t.descripcion||'';
-      $('sec-edit-comentario').value='';
-      $('sec-edit-secretaria').innerHTML='<option value="">Sin asignar</option>'+secretariaUsersData.filter(s=>s.activo!==false).map(s=>`<option value="${esc(s.id)}" ${String(s.id)===String(t.secretaria_id||'')?'selected':''}>${esc(s.nombre)} · ${esc(s.rol)}</option>`).join('');
-      $('modal-sec-edit').classList.add('flex');
-    }
-    async function saveSecEditFromModal(e){
-      e.preventDefault();
-      const id=$('sec-edit-id').value;
-      const old=secretariaTicketsData.find(t=>String(t.id)===String(id));
-      if(!old) return showToast('No se encontró la atención seleccionada','error');
-      const nuevo=$('sec-edit-estado').value;
-      const transfer=nuevo==='Transferido a IT';
-      const sec=secretariaUsersData.find(u=>String(u.id)===$('sec-edit-secretaria').value);
-      const comentario=($('sec-edit-comentario').value||'').trim();
-      const payload={
-        asunto:$('sec-edit-asunto').value,
-        estado: transfer ? 'Transferido a IT' : nuevo,
-        transferido_it: transfer,
-        secretaria_id: sec?.id||null,
-        secretaria_nombre: sec?.nombre||'',
-        canal:$('sec-edit-canal').value,
-        descripcion:$('sec-edit-descripcion').value
-      };
-      if(nuevo==='Resuelto' && !old.rating_token && !old.valoracion_calificacion) payload.rating_token=randomToken();
-      if(nuevo==='Cancelado') payload.rating_token=null;
-      const {error}=await sbClient.from('secretaria_tickets').update(payload).eq('id',id);
-      if(error)return showToast(error.message,'error');
-      let itCreated=null;
-      if(transfer && !old.transferido_it){
-        itCreated=await crearTicketITDesdeSecretaria(old,payload,comentario);
-      }
-      await sbClient.from('secretaria_historial').insert({ticket_id:id,accion:transfer?'Transferencia a IT':nuevo==='Resuelto'?'Resolución':nuevo==='Cancelado'?'Cancelación':'Actualización',estado_anterior:old.estado,estado_nuevo:payload.estado,secretaria_origen:old.secretaria_nombre,secretaria_destino:payload.secretaria_nombre,comentario:(comentario||'')+(itCreated?` | Ticket IT generado: ${itCreated.id_str}`:''),created_by:currentProfile?.nombre_completo||currentUser?.email});
-      await secAudit(transfer?'Transferir a IT':nuevo==='Resuelto'?'Resolver atención':nuevo==='Cancelado'?'Cancelar atención':'Actualizar atención','secretaria_tickets',id,old,{...payload,it_ticket_id:itCreated?.id||old.it_ticket_id||null});
-      closeSecEditModal();
-      await loadSecretariaData();
-      renderSecretariaModule();
-      showToast(transfer?'Atención transferida a IT':nuevo==='Resuelto'?'Atención resuelta':nuevo==='Cancelado'?'Atención cancelada':'Atención actualizada');
-    }
-    async function deleteSecTicket(id){ if(!confirm('¿Eliminar esta atención?'))return; const old=secretariaTicketsData.find(t=>String(t.id)===String(id)); const {error}=await sbClient.from('secretaria_tickets').delete().eq('id',id); if(error)return showToast(error.message,'error'); await secAudit('Eliminar atención','secretaria_tickets',id,old,null); await loadSecretariaData(); renderSecretariaModule(); }
-    window.openSecEdit=openSecEdit; window.deleteSecTicket=deleteSecTicket;
 
     sbClient.auth.onAuthStateChange(async (event,session)=>{ if(event==='PASSWORD_RECOVERY'){showToast('Ingresa tu nueva contraseña desde el panel de Supabase Auth. Esta versión estática ya recibió la sesión.')} });
     initApp();
