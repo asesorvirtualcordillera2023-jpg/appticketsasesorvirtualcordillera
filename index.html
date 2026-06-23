@@ -913,8 +913,7 @@
         resolved_at:now,
         resolution_minutes:ticketResolutionMinutes(it) ?? minutesBetween(it.created_at,now) ?? 0,
         last_status_change_at:now,
-        rating_token:null,
-        rating_token_expires_at:null
+        rating_token:null
       };
       const {error:itErr}=await sbClient.from('tickets').update(itPayload).eq('id',it.id);
       if(itErr) return showToast('No se pudo cerrar el ticket IT: '+itErr.message,'error');
@@ -952,8 +951,8 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       if(agentChanged) payload.assigned_at=now;
       if(statusChanged) payload.last_status_change_at=now;
       if(newEstado==='Resuelto' && old.estado!=='Resuelto') { payload.resolved_at=now; payload.resolution_minutes=minutesBetween(old.created_at,now)??0; payload.rating_token=old.rating_token||randomToken(); }
-      if(newEstado==='Cancelado') { payload.resolved_at=null; payload.resolution_minutes=null; payload.rating_token=null; payload.rating_token_expires_at=null; }
-      if(newEstado!=='Resuelto' && old.estado==='Resuelto') { payload.resolved_at=null; payload.resolution_minutes=null; payload.rating_token=null; payload.rating_token_expires_at=null; }
+      if(newEstado==='Cancelado') { payload.resolved_at=null; payload.resolution_minutes=null; payload.rating_token=null; }
+      if(newEstado!=='Resuelto' && old.estado==='Resuelto') { payload.resolved_at=null; payload.resolution_minutes=null; payload.rating_token=null; }
       const {error}=await sbClient.from('tickets').update(payload).eq('id',id);
       if(error)return showToast(error.message,'error');
       const cambios=[]; if(statusChanged)cambios.push(`estado: ${old.estado} -> ${newEstado}`); if(agentChanged)cambios.push(`agente: ${agentName(old)} -> ${payload.assigned_agent_name||'Sin asignar'}`);
