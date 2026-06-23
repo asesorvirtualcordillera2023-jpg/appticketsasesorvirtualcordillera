@@ -1725,6 +1725,69 @@
       document.body.appendChild(wrap);
       $('sec-edit-form').onsubmit=saveSecEditFromModal;
     }
+
+    async function crearTicketITDesdeSecretaria(secTicket, updatePayload, comentario){
+      if(!secTicket || secTicket.it_ticket_id || secTicket._itTicketCreated) return null;
+      const now=new Date();
+      const candidatos=activeAgents().filter(a=>{
+        const role=normalizeRole(a.rol);
+        const perms=normalizePermissions(a.rol,a.permisos);
+        return a.activo!==false && (['admin','advanced','coordinator'].includes(role) || perms.registros || perms.form);
+      });
+      const assigned=candidatos.find(a=>normalizeRole(a.rol)==='admin') || candidatos[0] || currentProfile;
+      const itTicket={
+        id_str:'TKT-SEC-'+String(secTicket.codigo||Math.floor(Math.random()*100000)).replace(/[^0-9A-Za-z-]/g,'').slice(-8),
+        fecha_texto:nowEcuador(),
+        agente_id:currentProfile?.id||null,
+        agente_nombre:`Secretaría / ${currentProfile?.nombre_completo||currentUser?.email||''}`,
+        assigned_agent_id:assigned?.id||null,
+        assigned_agent_name:assigned?.nombre_completo||assigned?.email||'Soporte IT',
+        assigned_at:now.toISOString(),
+        last_status_change_at:now.toISOString(),
+        usuario_id:secTicket.estudiante_id||null,
+        usuario_cedula:secTicket.cedula||'',
+        usuario_nombre:secTicket.nombre||'',
+        asunto:`[Secretaría] ${updatePayload?.asunto||secTicket.asunto||'Requerimiento transferido'}`,
+        categoria:'Derivación a IT',
+        subcategoria:secTicket.categoria||'Atención Secretaría',
+        prioridad:'Media',
+        canal:'Secretaría',
+        descripcion:`Transferido desde Atención Secretaría.\n\nCódigo Secretaría: ${secTicket.codigo||''}\nUsuario: ${secTicket.nombre||''} ${secTicket.cedula?`(${secTicket.cedula})`:''}\nCorreo: ${secTicket.correo||''}\nWhatsApp: ${secTicket.whatsapp||''}\nRequerimiento: ${secTicket.asunto||''}\nDetalle: ${updatePayload?.descripcion||secTicket.descripcion||''}\nMotivo/comentario: ${comentario||'Requiere revisión de Soporte IT.'}`,
+        estado:'Requiere Seguimiento',
+        rating_token:null
+      };
+      let created=null;
+      const {data,error}=await sbClient.from('tickets').insert(itTicket).select().single();
+      if(error){
+        console.warn('No se pudo crear ticket IT desde Secretaría', error);
+        showToast('La atención quedó transferida, pero no se pudo crear el ticket IT: '+error.message,'error');
+        return null;
+      }
+      created=data;
+      await registrarSeguimiento(created.id,{accion:'Transferencia desde Secretaría',estado_nuevo:'Requiere Seguimiento',comentario:`Ticket generado desde ${secTicket.codigo||'Atención Secretaría'}. ${comentario||''}`,agente_destino_id:itTicket.assigned_agent_id,agente_destino_nombre:itTicket.assigned_agent_name},false);
+      try{
+        await sbClient.from('secretaria_tickets').update({it_ticket_id:created.id}).eq('id',secTicket.id);
+      }catch(e){ console.warn('No se pudo asociar it_ticket_id', e); }
+      const recipients=(candidatos.length?candidatos:[assigned]).filter(Boolean);
+      const unique=[...new Map(recipients.map(a=>[a.id,a])).values()];
+      for(const a of unique){
+        try{
+          await sbClient.from('notificaciones').insert({
+            agent_id:a.id,
+            ticket_id:created.id,
+            tipo:'secretaria_transferencia',
+            titulo:`Transferencia Secretaría: ${created.id_str}`,
+            mensaje:`${secTicket.codigo||'Una atención'} fue transferida desde Secretaría a Soporte IT. Usuario: ${secTicket.nombre||''}. Requerimiento: ${secTicket.asunto||''}.`,
+            created_by:currentProfile?.id||null,
+            created_by_nombre:currentProfile?.nombre_completo||currentUser?.email||'',
+            data:{origen:'secretaria',secretaria_codigo:secTicket.codigo,it_ticket_id:created.id,it_ticket_id_str:created.id_str,asunto:created.asunto}
+          });
+        }catch(e){ console.warn('No se pudo notificar agente IT', a?.id, e); }
+      }
+      await loadNotifications(); updateNotificationBadge();
+      return created;
+    }
+
     function closeSecEditModal(){ const m=$('modal-sec-edit'); if(m) m.classList.remove('flex'); }
     function openSecEdit(t){
       ensureSecEditModal();
@@ -1760,8 +1823,12 @@
       if(nuevo==='Cancelado') payload.rating_token=null;
       const {error}=await sbClient.from('secretaria_tickets').update(payload).eq('id',id);
       if(error)return showToast(error.message,'error');
-      await sbClient.from('secretaria_historial').insert({ticket_id:id,accion:transfer?'Transferencia a IT':nuevo==='Resuelto'?'Resolución':nuevo==='Cancelado'?'Cancelación':'Actualización',estado_anterior:old.estado,estado_nuevo:payload.estado,secretaria_origen:old.secretaria_nombre,secretaria_destino:payload.secretaria_nombre,comentario,created_by:currentProfile?.nombre_completo||currentUser?.email});
-      await secAudit(transfer?'Transferir a IT':nuevo==='Resuelto'?'Resolver atención':nuevo==='Cancelado'?'Cancelar atención':'Actualizar atención','secretaria_tickets',id,old,payload);
+      let itCreated=null;
+      if(transfer && !old.transferido_it){
+        itCreated=await crearTicketITDesdeSecretaria(old,payload,comentario);
+      }
+      await sbClient.from('secretaria_historial').insert({ticket_id:id,accion:transfer?'Transferencia a IT':nuevo==='Resuelto'?'Resolución':nuevo==='Cancelado'?'Cancelación':'Actualización',estado_anterior:old.estado,estado_nuevo:payload.estado,secretaria_origen:old.secretaria_nombre,secretaria_destino:payload.secretaria_nombre,comentario:(comentario||'')+(itCreated?` | Ticket IT generado: ${itCreated.id_str}`:''),created_by:currentProfile?.nombre_completo||currentUser?.email});
+      await secAudit(transfer?'Transferir a IT':nuevo==='Resuelto'?'Resolver atención':nuevo==='Cancelado'?'Cancelar atención':'Actualizar atención','secretaria_tickets',id,old,{...payload,it_ticket_id:itCreated?.id||old.it_ticket_id||null});
       closeSecEditModal();
       await loadSecretariaData();
       renderSecretariaModule();
