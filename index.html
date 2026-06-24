@@ -463,7 +463,7 @@
   <b class="text-instVerdeOscuro">Formato CSV aceptado:</b><br>
   <code class="block mt-2 whitespace-normal leading-5">CEDULA,NOMBRE,CORREO_INSTITUCIONAL,CORREO_PERSONAL,CELULAR,WHATSAPP,CARRERA,NIVEL,TIPO,PERIODO</code>
   <div class="mt-2 text-[11px] text-slate-500">También se aceptan equivalencias: <b>CORREO</b> o <b>E-MAIL</b> como correo institucional, y <b>NOMBRES</b> en lugar de <b>NOMBRE</b>.</div>
-</div><div class="bg-green-50 border border-green-200 text-green-800 rounded-xl p-3 text-xs mb-4"><b>Periodo activo:</b> <span id="periodo-activo-import-label">-</span><br>Si el CSV no trae PERIODO, se asignará el periodo activo. Si la cédula ya existe, se omitirá para evitar duplicados.</div><a href="plantilla_directorio_contactos.csv" download class="btn btn-muted w-full justify-center mb-4"><i class="fa-solid fa-download"></i> Descargar formato CSV actualizado</a><div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center"><input type="file" id="csv-file" accept=".csv" class="hidden" onchange="handleCSVUpload(event)"><label for="csv-file" class="cursor-pointer flex flex-col items-center"><i class="fa-solid fa-cloud-arrow-up text-4xl text-instVerdeClaro mb-3"></i><span class="font-semibold">Seleccionar archivo CSV</span><span class="text-xs text-gray-400 mt-1" id="file-name-display">Ningún archivo seleccionado</span></label></div></div><div class="bg-white p-6 rounded-2xl shadow-sm border space-y-6"><div><h3 class="font-semibold text-instVerdeOscuro mb-2 border-b pb-2">Categorías</h3><div class="flex gap-2 mb-3"><input type="text" id="new-cat" class="field py-2" placeholder="Nueva categoría..."><button onclick="addConfigItem('categorias','new-cat')" class="btn btn-green px-4"><i class="fa-solid fa-plus"></i></button></div><div id="list-categorias" class="flex flex-wrap gap-2"></div></div><div><h3 class="font-semibold text-instVerdeOscuro mb-2 border-b pb-2">Canales</h3><div class="flex gap-2 mb-3"><input type="text" id="new-canal" class="field py-2" placeholder="Nuevo canal..."><button onclick="addConfigItem('canales','new-canal')" class="btn btn-primary px-4"><i class="fa-solid fa-plus"></i></button></div><div id="list-canales" class="flex flex-wrap gap-2"></div></div><div class="pt-4 border-t"><h3 class="font-semibold text-instVerdeOscuro mb-2 border-b pb-2">Categorías Secretaría</h3><div class="flex gap-2 mb-3"><input type="text" id="new-sec-cat" class="field py-2" placeholder="Nueva categoría Secretaría..."><button onclick="addConfigItem('secretaria_categorias','new-sec-cat')" class="btn btn-green px-4"><i class="fa-solid fa-plus"></i></button></div><div id="list-secretaria-categorias" class="flex flex-wrap gap-2"></div></div><div><h3 class="font-semibold text-instVerdeOscuro mb-2 border-b pb-2">Canales Secretaría</h3><div class="flex gap-2 mb-3"><input type="text" id="new-sec-canal" class="field py-2" placeholder="Nuevo canal Secretaría..."><button onclick="addConfigItem('secretaria_canales','new-sec-canal')" class="btn btn-primary px-4"><i class="fa-solid fa-plus"></i></button></div><div id="list-secretaria-canales" class="flex flex-wrap gap-2"></div></div></div></div></section>
+</div><div class="bg-green-50 border border-green-200 text-green-800 rounded-xl p-3 text-xs mb-4"><b>Periodo activo:</b> <span id="periodo-activo-import-label">-</span><br>Si el CSV no trae PERIODO, se asignará el periodo activo. Si la cédula ya existe, se completarán solo los campos vacíos sin duplicar ni sobrescribir datos existentes.</div><a href="plantilla_directorio_contactos.csv" download class="btn btn-muted w-full justify-center mb-4"><i class="fa-solid fa-download"></i> Descargar formato CSV actualizado</a><div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center"><input type="file" id="csv-file" accept=".csv" class="hidden" onchange="handleCSVUpload(event)"><label for="csv-file" class="cursor-pointer flex flex-col items-center"><i class="fa-solid fa-cloud-arrow-up text-4xl text-instVerdeClaro mb-3"></i><span class="font-semibold">Seleccionar archivo CSV</span><span class="text-xs text-gray-400 mt-1" id="file-name-display">Ningún archivo seleccionado</span></label></div></div><div class="bg-white p-6 rounded-2xl shadow-sm border space-y-6"><div><h3 class="font-semibold text-instVerdeOscuro mb-2 border-b pb-2">Categorías</h3><div class="flex gap-2 mb-3"><input type="text" id="new-cat" class="field py-2" placeholder="Nueva categoría..."><button onclick="addConfigItem('categorias','new-cat')" class="btn btn-green px-4"><i class="fa-solid fa-plus"></i></button></div><div id="list-categorias" class="flex flex-wrap gap-2"></div></div><div><h3 class="font-semibold text-instVerdeOscuro mb-2 border-b pb-2">Canales</h3><div class="flex gap-2 mb-3"><input type="text" id="new-canal" class="field py-2" placeholder="Nuevo canal..."><button onclick="addConfigItem('canales','new-canal')" class="btn btn-primary px-4"><i class="fa-solid fa-plus"></i></button></div><div id="list-canales" class="flex flex-wrap gap-2"></div></div><div class="pt-4 border-t"><h3 class="font-semibold text-instVerdeOscuro mb-2 border-b pb-2">Categorías Secretaría</h3><div class="flex gap-2 mb-3"><input type="text" id="new-sec-cat" class="field py-2" placeholder="Nueva categoría Secretaría..."><button onclick="addConfigItem('secretaria_categorias','new-sec-cat')" class="btn btn-green px-4"><i class="fa-solid fa-plus"></i></button></div><div id="list-secretaria-categorias" class="flex flex-wrap gap-2"></div></div><div><h3 class="font-semibold text-instVerdeOscuro mb-2 border-b pb-2">Canales Secretaría</h3><div class="flex gap-2 mb-3"><input type="text" id="new-sec-canal" class="field py-2" placeholder="Nuevo canal Secretaría..."><button onclick="addConfigItem('secretaria_canales','new-sec-canal')" class="btn btn-primary px-4"><i class="fa-solid fa-plus"></i></button></div><div id="list-secretaria-canales" class="flex flex-wrap gap-2"></div></div></div></div></section>
       </div>
     </main>
   </div>
@@ -1363,9 +1363,62 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
     window.previewAgentPhoto=previewAgentPhoto; window.editAgent=editAgent; window.toggleAgentActive=toggleAgentActive; window.softDeleteAgent=softDeleteAgent; window.clearAgentAdminForm=clearAgentAdminForm; window.generateAgentLoginLink=generateAgentLoginLink; window.generateSecureInvitation=generateSecureInvitation; window.generateSecureInvitationForAgent=generateSecureInvitationForAgent; window.renderInvitations=renderInvitations; window.loadInvitations=loadInvitations; window.copyText=copyText; window.copyAgentLoginLink=copyAgentLoginLink; window.applyRolePresetToForm=applyRolePresetToForm; if($('agent-admin-form')) $('agent-admin-form').onsubmit=updateAgentFromForm; if($('agent-admin-role')) $('agent-admin-role').onchange=applyRolePresetToForm; if($('btn-apply-role-preset')) $('btn-apply-role-preset').onclick=applyRolePresetToForm;
 
 
-    function parseCSV(text){ const rows=[]; let row=[],cell='',q=false; for(let i=0;i<text.length;i++){const ch=text[i],nx=text[i+1]; if(ch==='"'&&q&&nx==='"'){cell+='"';i++;continue} if(ch==='"'){q=!q;continue} if(ch===','&&!q){row.push(cell);cell='';continue} if((ch==='\n'||ch==='\r')&&!q){ if(ch==='\r'&&nx==='\n')i++; row.push(cell); if(row.some(x=>x.trim()!==''))rows.push(row); row=[]; cell=''; continue } cell+=ch; } row.push(cell); if(row.some(x=>x.trim()!==''))rows.push(row); return rows; }
+    function detectCSVDelimiter(line){
+      let semis=0, commas=0, q=false;
+      for(let i=0;i<line.length;i++){
+        const ch=line[i], nx=line[i+1];
+        if(ch==='"'&&q&&nx==='"'){ i++; continue; }
+        if(ch==='"'){ q=!q; continue; }
+        if(!q && ch===';') semis++;
+        if(!q && ch===',') commas++;
+      }
+      return semis>commas ? ';' : ',';
+    }
+    function parseCSV(text){
+      text=String(text||'').replace(/^\uFEFF/,'');
+      const firstLine=(text.split(/\r?\n/).find(l=>l.trim())||'');
+      const delimiter=detectCSVDelimiter(firstLine);
+      const rows=[]; let row=[],cell='',q=false;
+      for(let i=0;i<text.length;i++){
+        const ch=text[i],nx=text[i+1];
+        if(ch==='"'&&q&&nx==='"'){cell+='"';i++;continue}
+        if(ch==='"'){q=!q;continue}
+        if(ch===delimiter&&!q){row.push(cell);cell='';continue}
+        if((ch==='\n'||ch==='\r')&&!q){ if(ch==='\r'&&nx==='\n')i++; row.push(cell); if(row.some(x=>String(x).trim()!==''))rows.push(row); row=[]; cell=''; continue }
+        cell+=ch;
+      }
+      row.push(cell); if(row.some(x=>String(x).trim()!==''))rows.push(row);
+      rows.delimiter=delimiter;
+      return rows;
+    }
     function csvCell(v){ const s=String(v??''); return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }
     function download(name,content,type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type})); a.download=name; a.click(); URL.revokeObjectURL(a.href); }
+    function normalizeCedula(v){ return String(v??'').trim().replace(/[^0-9A-Za-z]/g,''); }
+    function normalizePhone(v){
+      let n=String(v??'').trim().replace(/[^0-9]/g,'');
+      if(n.length===9 && n.startsWith('9')) n='0'+n;
+      return n;
+    }
+    function normalizeEmail(v){ return String(v??'').trim().toLowerCase(); }
+    function normalizePeriodo(v){
+      const raw=norm(v);
+      if(!raw) return currentAcademicPeriod();
+      const k=raw.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[_]+/g,' ').replace(/\s+/g,' ').trim();
+      if((k.includes('ABR')||k.includes('ABRIL')) && (k.includes('SEP')||k.includes('SEPTIEMBRE'))) return 'Abril - Septiembre 2026';
+      if((k.includes('OCT')||k.includes('OCTUBRE')) && (k.includes('MAR')||k.includes('MARZO'))) return 'Octubre - Marzo 2026-2027';
+      return raw;
+    }
+    function getRowVal(row, ix){ return ix>=0 ? norm(row[ix]) : ''; }
+    function mergeOnlyEmpty(existing, incoming){
+      const upd={};
+      const keys=['nombres','correo','correo_personal','celular','whatsapp','carrera','nivel','tipo','periodo'];
+      keys.forEach(k=>{
+        const current=norm(existing?.[k]);
+        const next=norm(incoming?.[k]);
+        if(!current && next) upd[k]=next;
+      });
+      return upd;
+    }
     async function handleCSVUpload(event){
       const f=event.target.files[0]; if(!f)return;
       $('file-name-display').textContent='Procesando...';
@@ -1383,29 +1436,55 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       const iNiv=col(['NIVEL','SEMESTRE','CURSO'],4);
       const iTipo=col(['TIPO','ROL','TIPOUSUARIO'],5);
       const iPer=col(['PERIODO','PERÍODO','PERIODOACADEMICO','PERIODOACADÉMICO'],6);
-      const periodoActivo=currentAcademicPeriod();
-      const cedulasExistentes=new Set(directorioData.map(u=>norm(u.cedula)));
+      const directorioMap=new Map(directorioData.map(u=>[normalizeCedula(u.cedula),u]));
       const vistos=new Set();
-      let omitidos=0, duplicadosCsv=0;
-      const payload=[];
+      let duplicadosCsv=0, omitidosSinCambios=0, insertados=0, actualizados=0;
+      const nuevos=[];
+      const updates=[];
       for(let i=1;i<rows.length;i++){
         const r=rows[i];
-        const cedula=norm(r[iCed]);
+        const cedula=normalizeCedula(getRowVal(r,iCed));
         if(!cedula) continue;
-        if(cedulasExistentes.has(cedula)){ omitidos++; continue; }
         if(vistos.has(cedula)){ duplicadosCsv++; continue; }
         vistos.add(cedula);
-        payload.push({cedula,nombres:norm(r[iNom])||'Sin Nombre',correo:norm(r[iMail]),correo_personal:iMailPersonal>=0?norm(r[iMailPersonal]):'',celular:iCel>=0?norm(r[iCel]):'',whatsapp:iWa>=0?norm(r[iWa]):(iCel>=0?norm(r[iCel]):''),carrera:norm(r[iCar]),nivel:norm(r[iNiv]),tipo:norm(r[iTipo])||'Estudiante',periodo:norm(r[iPer])||periodoActivo});
+        const celular=normalizePhone(getRowVal(r,iCel));
+        const whatsapp=normalizePhone(getRowVal(r,iWa) || celular);
+        const incoming={
+          cedula,
+          nombres:getRowVal(r,iNom)||'Sin Nombre',
+          correo:normalizeEmail(getRowVal(r,iMail)),
+          correo_personal:normalizeEmail(getRowVal(r,iMailPersonal)),
+          celular,
+          whatsapp,
+          carrera:getRowVal(r,iCar),
+          nivel:getRowVal(r,iNiv),
+          tipo:getRowVal(r,iTipo)||'Estudiante',
+          periodo:normalizePeriodo(getRowVal(r,iPer))
+        };
+        const existing=directorioMap.get(cedula);
+        if(existing){
+          const patch=mergeOnlyEmpty(existing,incoming);
+          if(Object.keys(patch).length){ updates.push({id:existing.id, patch}); }
+          else omitidosSinCambios++;
+        }else{
+          nuevos.push(incoming);
+        }
       }
-      let count=0;
-      for(let i=0;i<payload.length;i+=500){
-        const chunk=payload.slice(i,i+500);
+      for(let i=0;i<nuevos.length;i+=500){
+        const chunk=nuevos.slice(i,i+500);
         const {error}=await sbClient.from('directorio').insert(chunk);
         if(error){showToast(error.message,'error');break}
-        count+=chunk.length;
+        insertados+=chunk.length;
+      }
+      for(let i=0;i<updates.length;i+=100){
+        const chunk=updates.slice(i,i+100);
+        const results=await Promise.all(chunk.map(u=>sbClient.from('directorio').update(u.patch).eq('id',u.id)));
+        const err=results.find(r=>r.error)?.error;
+        if(err){ showToast(err.message,'error'); break; }
+        actualizados+=chunk.length;
       }
       $('file-name-display').textContent='Carga finalizada';
-      showToast(`Nuevos: ${count}. Existentes omitidos: ${omitidos}. Duplicados CSV: ${duplicadosCsv}`);
+      showToast(`Nuevos: ${insertados}. Actualizados vacíos: ${actualizados}. Sin cambios: ${omitidosSinCambios}. Duplicados CSV: ${duplicadosCsv}. Separador: ${rows.delimiter}`);
       await loadDirectory(); renderDirectorio(); event.target.value='';
     }
     window.handleCSVUpload=handleCSVUpload;
