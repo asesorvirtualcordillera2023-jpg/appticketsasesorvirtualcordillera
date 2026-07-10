@@ -69,10 +69,63 @@
     }
     async function loadAuditoriaGeneral(){
       const rows=[];
+
+      // Auditoría de tickets / Soporte IT
       try{
-        const {data}=await sbClient.from('ticket_seguimientos').select('*').order('created_at',{ascending:false}).limit(500);
-        (data||[]).forEach(r=>rows.push({fecha:r.created_at, modulo:'Soporte IT', accion:r.accion||'Seguimiento', usuario:r.created_by_nombre||r.agente_origen_nombre||'', registro:r.ticket_id||'', detalle:[r.estado_anterior,r.estado_nuevo,r.comentario].filter(Boolean).join(' | ')}));
-      }catch(e){ console.warn('Auditoría IT no disponible', e); }
+        const {data,error}=await sbClient
+          .from('ticket_seguimientos')
+          .select('*')
+          .order('created_at',{ascending:false})
+          .limit(1000);
+        if(error) throw error;
+        (data||[]).forEach(r=>{
+          rows.push({
+            fecha:r.created_at,
+            modulo:'Soporte IT',
+            accion:r.accion||'Seguimiento',
+            usuario:r.created_by_nombre||r.agente_origen_nombre||r.agente_destino_nombre||'',
+            registro:r.ticket_id||'',
+            detalle:[
+              r.estado_anterior?('Anterior: '+r.estado_anterior):'',
+              r.estado_nuevo?('Nuevo: '+r.estado_nuevo):'',
+              r.agente_origen_nombre?('Origen: '+r.agente_origen_nombre):'',
+              r.agente_destino_nombre?('Destino: '+r.agente_destino_nombre):'',
+              r.comentario||''
+            ].filter(Boolean).join(' | ')
+          });
+        });
+      }catch(e){
+        console.warn('Auditoría de Soporte IT no disponible', e);
+      }
+
+      // Auditoría de Secretaría / Atención Estudiantil
+      try{
+        const {data,error}=await sbClient
+          .from('secretaria_auditoria')
+          .select('*')
+          .order('created_at',{ascending:false})
+          .limit(1000);
+        if(error) throw error;
+        (data||[]).forEach(r=>{
+          const antes = r.datos_antes ? JSON.stringify(r.datos_antes) : '';
+          const despues = r.datos_despues ? JSON.stringify(r.datos_despues) : '';
+          rows.push({
+            fecha:r.created_at,
+            modulo:'Secretaría',
+            accion:r.accion||'Acción Secretaría',
+            usuario:r.usuario_nombre||'',
+            registro:r.registro_id||'',
+            detalle:[
+              r.modulo?('Módulo: '+r.modulo):'',
+              antes?('Antes: '+antes):'',
+              despues?('Después: '+despues):''
+            ].filter(Boolean).join(' | ')
+          });
+        });
+      }catch(e){
+        console.warn('Auditoría de Secretaría no disponible', e);
+      }
+
       auditoriaGeneralData = rows.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
     }
     function filteredAuditoria(){
@@ -88,9 +141,11 @@
     }
     function renderAuditoriaGeneral(){
       const rows=filteredAuditoria();
+      const itRows=rows.filter(r=>r.modulo==='Soporte IT');
+      const secRows=rows.filter(r=>r.modulo==='Secretaría');
       if($('aud-kpi-total')) $('aud-kpi-total').textContent=rows.length;
-      if($('aud-kpi-it')) $('aud-kpi-it').textContent=rows.filter(r=>r.modulo==='Soporte IT').length;
-      
+      if($('aud-kpi-it')) $('aud-kpi-it').textContent=itRows.length;
+      if($('aud-kpi-sec')) $('aud-kpi-sec').textContent=secRows.length;
       if($('aud-kpi-last')) $('aud-kpi-last').textContent=rows[0]?formatDateTimeEcuador(rows[0].fecha):'-';
       if($('aud-count')) $('aud-count').textContent=`${rows.length} registros`;
       const body=$('auditoria-table-body');
@@ -100,12 +155,14 @@
     function exportAuditoriaCSV(){
       const rows=filteredAuditoria(); const headers=['Fecha','Modulo','Accion','Usuario','Registro','Detalle'];
       const csv=[headers.join(',')].concat(rows.map(r=>[formatDateTimeEcuador(r.fecha),r.modulo,r.accion,r.usuario,r.registro,r.detalle].map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(','))).join('\n');
-      const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'})); a.download='auditoria_general.csv'; a.click();
+      const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'})); a.download='auditoria_general_it_secretaria.csv'; a.click();
     }
     function exportAuditoriaHTML(){
       const rows=filteredAuditoria();
-      const html=`<!doctype html><html><head><meta charset="utf-8"><title>Reporte de Auditoría IT</title><style>body{font-family:Arial;color:#333}h1{color:#006068}.kpi{display:inline-block;border:1px solid #ddd;border-radius:12px;padding:12px;margin:6px}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#006068;color:#fff}td,th{border:1px solid #ddd;padding:7px}</style></head><body><h1>Reporte de Auditoría IT</h1><p>Generado: ${nowEcuador()}</p><div class="kpi"><b>Total:</b> ${rows.length}</div><div class="kpi"><b>Soporte IT:</b> ${rows.filter(r=>r.modulo==='Soporte IT').length}</div><table><thead><tr><th>Fecha</th><th>Módulo</th><th>Acción</th><th>Usuario</th><th>Registro</th><th>Detalle</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(formatDateTimeEcuador(r.fecha))}</td><td>${esc(r.modulo)}</td><td>${esc(r.accion)}</td><td>${esc(r.usuario)}</td><td>${esc(r.registro)}</td><td>${esc(r.detalle)}</td></tr>`).join('')}</tbody></table></body></html>`;
-      const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'})); a.download='auditoria_general.html'; a.click();
+      const it=rows.filter(r=>r.modulo==='Soporte IT').length;
+      const sec=rows.filter(r=>r.modulo==='Secretaría').length;
+      const html=`<!doctype html><html><head><meta charset="utf-8"><title>Reporte de Auditoría General</title><style>body{font-family:Arial;color:#333}h1{color:#006068}.kpi{display:inline-block;border:1px solid #ddd;border-radius:12px;padding:12px;margin:6px}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#006068;color:#fff}td,th{border:1px solid #ddd;padding:7px}</style></head><body><h1>Reporte de Auditoría General</h1><p>Generado: ${nowEcuador()}</p><div class="kpi"><b>Total:</b> ${rows.length}</div><div class="kpi"><b>Soporte IT:</b> ${it}</div><div class="kpi"><b>Secretaría:</b> ${sec}</div><table><thead><tr><th>Fecha</th><th>Módulo</th><th>Acción</th><th>Usuario</th><th>Registro</th><th>Detalle</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(formatDateTimeEcuador(r.fecha))}</td><td>${esc(r.modulo)}</td><td>${esc(r.accion)}</td><td>${esc(r.usuario)}</td><td>${esc(r.registro)}</td><td>${esc(r.detalle)}</td></tr>`).join('')}</tbody></table></body></html>`;
+      const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'})); a.download='auditoria_general_it_secretaria.html'; a.click();
     }
     document.addEventListener('input', e=>{ if(['aud-search','aud-from','aud-to'].includes(e.target?.id)) renderAuditoriaGeneral(); });
     document.addEventListener('change', e=>{ if(['aud-modulo','aud-from','aud-to'].includes(e.target?.id)) renderAuditoriaGeneral(); });
@@ -442,11 +499,11 @@
         </section>
 
         <section id="tab-auditoria" class="tab-content max-w-7xl mx-auto">
-          <div class="flex items-center gap-3 mb-6"><div class="module-logo-wrap"><img class="module-logo" src="logo-icono-cordillera.jpg" alt="Logo"></div><div><h2 class="text-2xl font-bold text-instVerdeOscuro">Auditoría IT</h2><p class="text-sm text-instPlomo">Consolidado de acciones de Soporte IT con filtros dinámicos.</p></div></div>
+          <div class="flex items-center gap-3 mb-6"><div class="module-logo-wrap"><img class="module-logo" src="logo-icono-cordillera.jpg" alt="Logo"></div><div><h2 class="text-2xl font-bold text-instVerdeOscuro">Auditoría General</h2><p class="text-sm text-instPlomo">Consolidado de acciones de Soporte IT y Atención Secretaría con filtros dinámicos.</p></div></div>
           <div class="bg-white rounded-2xl border shadow-sm p-4 mb-6 grid grid-cols-1 md:grid-cols-5 gap-3">
             <input type="date" id="aud-from" class="field py-2">
             <input type="date" id="aud-to" class="field py-2">
-            <select id="aud-modulo" class="field py-2"><option value="IT">Soporte IT</option></select>
+            <select id="aud-modulo" class="field py-2"><option value="">Todos los módulos</option><option value="Soporte IT">Soporte IT</option><option value="Secretaría">Atención Secretaría</option></select>
             <input type="text" id="aud-search" class="field py-2" placeholder="Buscar usuario, acción, registro...">
             <button onclick="resetAuditoriaFilters()" class="btn btn-muted py-2"><i class="fa-solid fa-rotate-left"></i> Limpiar</button>
             <div class="md:col-span-5 flex flex-wrap gap-2 justify-end">
@@ -455,7 +512,7 @@
               <button onclick="exportAuditoriaHTML()" class="btn btn-primary px-4 py-2"><i class="fa-solid fa-file-code"></i> Reporte HTML</button>
             </div>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"><div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Total acciones</p><b id="aud-kpi-total" class="text-2xl text-instVerdeOscuro">0</b></div><div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Soporte IT</p><b id="aud-kpi-it" class="text-2xl text-blue-600">0</b></div><div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Última acción</p><b id="aud-kpi-last" class="text-sm text-gray-600">-</b></div></div>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"><div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Total acciones</p><b id="aud-kpi-total" class="text-2xl text-instVerdeOscuro">0</b></div><div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Soporte IT</p><b id="aud-kpi-it" class="text-2xl text-blue-600">0</b></div><div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Atención Secretaría</p><b id="aud-kpi-sec" class="text-2xl text-green-600">0</b></div><div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Última acción</p><b id="aud-kpi-last" class="text-sm text-gray-600">-</b></div></div>
           <div class="bg-white rounded-2xl border shadow-sm overflow-hidden"><div class="p-4 border-b bg-gray-50 flex justify-between items-center"><h3 class="font-semibold text-instVerdeOscuro">Registros de auditoría</h3><span id="aud-count" class="text-xs bg-instVerdeClaro text-white px-3 py-1 rounded-full">0</span></div><div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="bg-gray-50"><tr><th class="px-4 py-3">Fecha</th><th class="px-4 py-3">Módulo</th><th class="px-4 py-3">Acción</th><th class="px-4 py-3">Usuario</th><th class="px-4 py-3">Registro</th><th class="px-4 py-3">Detalle</th></tr></thead><tbody id="auditoria-table-body"></tbody></table></div></div>
         </section>
 
