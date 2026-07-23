@@ -219,6 +219,9 @@
             <i class="fa-solid fa-star" data-value="1"></i><i class="fa-solid fa-star" data-value="2"></i><i class="fa-solid fa-star" data-value="3"></i><i class="fa-solid fa-star" data-value="4"></i><i class="fa-solid fa-star" data-value="5"></i>
           </div>
           <p id="rating-text" class="text-sm font-semibold text-instTomate h-5"></p><input type="hidden" id="rating-value" required>
+          <p id="rating-stars-help" class="hidden mt-3 text-sm text-instTomate font-semibold bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 text-left shadow-sm">
+            <i class="fa-solid fa-circle-exclamation mr-2"></i> Para 3 estrellas o menos, la observación es obligatoria.
+          </p>
         </div>
         <div>
           <label id="rating-comment-label" class="block text-sm font-medium text-gray-700 mb-1">Comentarios adicionales (Opcional)</label>
@@ -811,7 +814,7 @@
         $('rating-comment').required=isRequired;
         $('rating-comment-label').textContent=isRequired?'Observación del servicio (Obligatoria)':'Comentarios adicionales (Opcional)';
         $('rating-comment').placeholder=isRequired?'Indique el motivo de su valoración para ayudarnos a mejorar.':'¿Cómo podemos mejorar?';
-        $('rating-comment-help').classList.toggle('hidden',!isRequired);
+        $('rating-comment-help').classList.toggle('hidden',!isRequired); if($('rating-stars-help')) $('rating-stars-help').classList.toggle('hidden',!isRequired);
       };
       stars.forEach(star=>{star.onclick=e=>{const val=Number(e.target.dataset.value);$('rating-value').value=val;$('rating-text').textContent=texts[val-1];stars.forEach((s,i)=>s.classList.toggle('active',i<val));updateRatingCommentRequirement(val);}});
       $('rating-form').onsubmit=async e=>{e.preventDefault(); const rating=Number($('rating-value').value); const comment=($('rating-comment').value||'').trim(); if(!rating){showToast('Selecciona una calificación','error');return} if(rating<=3 && comment.length<10){$('rating-error-message').classList.remove('hidden');$('rating-error-message').textContent='Para valoraciones de 3 estrellas o menos, ingresa una observación de al menos 10 caracteres.';$('rating-comment').focus();return} $('rating-error-message').classList.add('hidden'); $('btn-submit-rating').disabled=true; $('btn-submit-rating').innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Guardando...'; const {data:result,error:upErr}=await sbClient.rpc('submit_ticket_rating',{p_ticket_id:ticketId,p_token:token,p_calificacion:rating,p_comentario:comment}); if(upErr||!result?.success){$('rating-error-message').classList.remove('hidden');$('rating-error-message').textContent=upErr?.message||result?.message||'No se pudo guardar la valoración.';$('btn-submit-rating').disabled=false;$('btn-submit-rating').textContent='Intentar nuevamente'} else closeRatingScreen('¡Gracias por tu opinión!') };
@@ -828,8 +831,16 @@
       if(ticket.valoracion_calificacion){closeRatingScreen('Esta atención ya fue valorada.');return}
       $('rating-ticket-id').textContent=ticket.codigo||ticket.id; $('rating-user-name').textContent=ticket.nombre||'Usuario'; $('rating-ticket-subject').textContent=ticket.asunto||'la atención recibida';
       const stars=document.querySelectorAll('.star-rating i'); const texts=['Malo','Regular','Bueno','Muy Bueno','Excelente'];
-      stars.forEach(star=>{star.onclick=e=>{const val=Number(e.target.dataset.value);$('rating-value').value=val;$('rating-text').textContent=texts[val-1];stars.forEach((s,i)=>s.classList.toggle('active',i<val));}});
-      $('rating-form').onsubmit=async e=>{e.preventDefault(); const rating=Number($('rating-value').value); const comment=($('rating-comment').value||'').trim(); if(!rating)return showToast('Selecciona una calificación','error'); if(rating<=3 && comment.length<10)return showToast('Para 3 estrellas o menos, la observación es obligatoria.','error'); $('btn-submit-rating').disabled=true; $('btn-submit-rating').innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Guardando...'; const {error:upErr}=await sbClient.from('secretaria_tickets').update({valoracion_calificacion:rating,valoracion_comentario:comment,valoracion_fecha:new Date().toISOString(),rating_token:null}).eq('id',ticketId).eq('rating_token',token); if(upErr){$('rating-error-message').classList.remove('hidden');$('rating-error-message').textContent=upErr.message;$('btn-submit-rating').disabled=false;$('btn-submit-rating').textContent='Intentar nuevamente'} else closeRatingScreen('¡Gracias por tu opinión!') };
+      const updateSecretariaRatingRequirement=(val)=>{
+        const isRequired=Number(val)<=3;
+        $('rating-comment').required=isRequired;
+        $('rating-comment-label').textContent=isRequired?'Observación del servicio (Obligatoria)':'Comentarios adicionales (Opcional)';
+        $('rating-comment').placeholder=isRequired?'Indique el motivo de su valoración para ayudarnos a mejorar.':'¿Cómo podemos mejorar?';
+        if($('rating-comment-help')) $('rating-comment-help').classList.toggle('hidden',!isRequired);
+        if($('rating-stars-help')) $('rating-stars-help').classList.toggle('hidden',!isRequired);
+      };
+      stars.forEach(star=>{star.onclick=e=>{const val=Number(e.target.dataset.value);$('rating-value').value=val;$('rating-text').textContent=texts[val-1];stars.forEach((s,i)=>s.classList.toggle('active',i<val));updateSecretariaRatingRequirement(val);}});
+      $('rating-form').onsubmit=async e=>{e.preventDefault(); const rating=Number($('rating-value').value); const comment=($('rating-comment').value||'').trim(); if(!rating)return showToast('Selecciona una calificación','error'); if(rating<=3 && comment.length<10){$('rating-error-message').classList.remove('hidden');$('rating-error-message').textContent='Para 3 estrellas o menos, ingresa una observación de al menos 10 caracteres.'; if($('rating-stars-help')) $('rating-stars-help').classList.remove('hidden'); $('rating-comment').focus(); return} $('rating-error-message').classList.add('hidden'); $('btn-submit-rating').disabled=true; $('btn-submit-rating').innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Guardando...'; const payload={p_ticket_id:ticketId,p_token:token,p_calificacion:rating,p_comentario:comment}; let upErr=null; let rpcResult=null; const rpc=await sbClient.rpc('submit_secretaria_rating',payload); upErr=rpc.error; rpcResult=Array.isArray(rpc.data)?rpc.data[0]:rpc.data; if(upErr && String(upErr.message||'').toLowerCase().includes('function')){ const fallback=await sbClient.from('secretaria_tickets').update({valoracion_calificacion:rating,valoracion_comentario:comment,valoracion_fecha:new Date().toISOString(),rating_token:null}).eq('id',ticketId).eq('rating_token',token); upErr=fallback.error; rpcResult={success:!fallback.error}; } if(upErr||rpcResult?.success===false){$('rating-error-message').classList.remove('hidden');$('rating-error-message').textContent=upErr?.message||rpcResult?.message||'No se pudo guardar la valoración.';$('btn-submit-rating').disabled=false;$('btn-submit-rating').textContent='Intentar nuevamente'} else closeRatingScreen('¡Gracias por tu opinión!') };
     }
 
     async function initApp(){
