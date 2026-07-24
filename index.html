@@ -262,6 +262,14 @@
           <input type="email" id="reset-email" required class="field" placeholder="Correo registrado">
           <button class="btn btn-orange w-full py-3" type="submit"><i class="fa-solid fa-envelope"></i> Enviar recuperación</button>
         </form>
+        <form id="new-password-form" class="space-y-4 hidden">
+          <div class="bg-green-50 border border-green-200 text-green-800 rounded-xl p-3 text-sm text-left">
+            <i class="fa-solid fa-lock mr-2"></i> Escribe tu nueva contraseña para finalizar la recuperación de acceso.
+          </div>
+          <input type="password" id="new-password" required minlength="6" class="field" placeholder="Nueva contraseña mínimo 6 caracteres">
+          <input type="password" id="new-password-confirm" required minlength="6" class="field" placeholder="Confirmar nueva contraseña">
+          <button class="btn btn-green w-full py-3" type="submit"><i class="fa-solid fa-key"></i> Actualizar contraseña</button>
+        </form>
         <div class="mt-6 flex justify-center gap-4 text-sm">
           <button id="show-login" class="text-instVerdeOscuro font-semibold hidden">Ingresar</button>
           <button id="show-register" class="text-instVerdeOscuro font-semibold">Registrar agente</button>
@@ -847,6 +855,13 @@
       try {
         if(getParamRobust('rate_atencion')){ await initSecretariaRatingView(); return }
         if(isRatingRoute()){ await initRatingView(); return }
+        if(isPasswordRecoveryUrl()){
+          await withTimeout(sbClient.auth.getSession(), 15000, 'Validación de recuperación');
+          $('loading-screen').classList.add('hidden');
+          showAuth();
+          setAuthMode('new-password');
+          return;
+        }
         const {data:{session}} = await withTimeout(sbClient.auth.getSession(), 15000, 'Validación de sesión');
         if(session){
           currentUser=session.user;
@@ -965,11 +980,20 @@
     async function loadNotifications(){ if(!currentProfile?.id){notificationsData=[];return;} const {data,error}=await sbClient.from('notificaciones').select('*').eq('agent_id',currentProfile.id).order('created_at',{ascending:false}).limit(100); if(error){ console.warn('No se pudieron cargar notificaciones', error); notificationsData=[]; return; } notificationsData=data||[]; updateNotificationBadge(); }
     async function loadInvitations(){ if(!isAdmin()){ invitationsData=[]; return; } const {data,error}=await sbClient.from('invitaciones_agentes').select('*').order('created_at',{ascending:false}).limit(50); if(error){ console.warn('No se pudieron cargar invitaciones', error); invitationsData=[]; return; } invitationsData=data||[]; }
 
+    function isPasswordRecoveryUrl(){
+      const type=(getParamRobust('type')||'').toLowerCase();
+      const auth=(getParamRobust('auth')||'').toLowerCase();
+      return type==='recovery' || auth==='new-password' || (!!getParamRobust('access_token') && type==='recovery');
+    }
     function setAuthMode(mode){
-      ['login','register','reset'].forEach(m=>$(m+'-form').classList.toggle('hidden',m!==mode));
-      $('show-login').classList.toggle('hidden',mode==='login'); $('show-register').classList.toggle('hidden',mode==='register'); $('show-reset').classList.toggle('hidden',mode==='reset');
-      $('auth-title').textContent=mode==='login'?'Ingreso de Agentes':mode==='register'?'Registro de Agente':'Recuperar contraseña';
-      $('auth-subtitle').textContent=mode==='login'?'Accede con tu correo y contraseña institucional.':mode==='register'?'Crea tu usuario para operar el sistema.':'Recibirás un enlace de recuperación en tu correo.';
+      ['login','register','reset','new-password'].forEach(m=>$(m+'-form')?.classList.toggle('hidden',m!==mode));
+      $('show-login').classList.toggle('hidden',mode==='login');
+      $('show-register').classList.toggle('hidden',mode==='register'||mode==='new-password');
+      $('show-reset').classList.toggle('hidden',mode==='reset'||mode==='new-password');
+      const titles={login:'Ingreso de Agentes',register:'Registro de Agente',reset:'Recuperar contraseña','new-password':'Nueva contraseña'};
+      const subtitles={login:'Accede con tu correo y contraseña institucional.',register:'Crea tu usuario para operar el sistema.',reset:'Recibirás un enlace de recuperación en tu correo.','new-password':'Ingresa y confirma tu nueva contraseña.'};
+      $('auth-title').textContent=titles[mode]||titles.login;
+      $('auth-subtitle').textContent=subtitles[mode]||subtitles.login;
       applyAuthPrefill();
     }
     function applyAuthPrefill(){
@@ -997,13 +1021,15 @@
     }
     function initAuthFromUrl(){
       applyAuthPrefill();
+      if(isPasswordRecoveryUrl()){ setAuthMode('new-password'); return; }
       const mode=(getParamRobust('auth')||'login').toLowerCase();
-      if(['login','register','reset'].includes(mode)) setAuthMode(mode);
+      if(['login','register','reset','new-password'].includes(mode)) setAuthMode(mode);
     }
     $('show-login').onclick=()=>setAuthMode('login'); $('show-register').onclick=()=>setAuthMode('register'); $('show-reset').onclick=()=>setAuthMode('reset');
     $('login-form').onsubmit=async e=>{e.preventDefault(); const {data,error}=await sbClient.auth.signInWithPassword({email:$('login-email').value,password:$('login-password').value}); if(error)return showToast(error.message,'error'); currentUser=data.user; await loadProfile(); if(currentProfile?.activo===false){ showPendingAccount(); return; } await loadAll(); showApp(); showToast('Bienvenido')};
     $('register-form').onsubmit=async e=>{e.preventDefault(); const name=$('reg-name').value.trim(), email=$('reg-email').value.trim(), password=$('reg-password').value; const inviteToken=getParamRobust('inv')||''; if(inviteToken){ const inv=await validateInviteFromUrl(true); if(!inv?.valid) return showToast('La invitación no es válida o no corresponde al correo ingresado.','error'); } const {data,error}=await sbClient.auth.signUp({email,password,options:{data:{full_name:name,invite_token:inviteToken,role:$('reg-role')?.value||getParamRobust('role')||'agent',sec_user_id:getParamRobust('sec_user')||''},emailRedirectTo:window.location.origin+window.location.pathname}}); if(error)return showToast(error.message,'error'); showToast(inviteToken?'Cuenta creada con invitación. Confirma el correo e inicia sesión para activar permisos.':'Cuenta creada. Quedará pendiente hasta que un administrador active el perfil.'); setAuthMode('login')};
-    $('reset-form').onsubmit=async e=>{e.preventDefault(); const {error}=await sbClient.auth.resetPasswordForEmail($('reset-email').value,{redirectTo:window.location.origin+window.location.pathname}); if(error)return showToast(error.message,'error'); showToast('Enlace de recuperación enviado')};
+    $('reset-form').onsubmit=async e=>{e.preventDefault(); const resetUrl=window.location.origin+window.location.pathname+'?auth=new-password'; const {error}=await sbClient.auth.resetPasswordForEmail($('reset-email').value,{redirectTo:resetUrl}); if(error)return showToast(error.message,'error'); showToast('Enlace de recuperación enviado. Revisa tu correo y abre el enlace para escribir la nueva contraseña.')};
+    $('new-password-form').onsubmit=async e=>{e.preventDefault(); const pass=$('new-password').value; const pass2=$('new-password-confirm').value; if(pass.length<6)return showToast('La contraseña debe tener mínimo 6 caracteres','error'); if(pass!==pass2)return showToast('Las contraseñas no coinciden','error'); const btn=e.target.querySelector('button'); const oldText=btn.innerHTML; btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Actualizando...'; const {error}=await sbClient.auth.updateUser({password:pass}); btn.disabled=false; btn.innerHTML=oldText; if(error)return showToast(error.message,'error'); await sbClient.auth.signOut(); window.history.replaceState({},document.title,window.location.origin+window.location.pathname); $('new-password').value=''; $('new-password-confirm').value=''; setAuthMode('login'); showToast('Contraseña actualizada correctamente. Ingresa con tu nueva contraseña.'); };
     async function logout(){ await sbClient.auth.signOut(); location.reload(); }
     window.logout=logout;
 
@@ -2299,7 +2325,12 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
     async function deleteSecTicket(id){ if(!confirm('¿Eliminar esta atención?'))return; const old=secretariaTicketsData.find(t=>String(t.id)===String(id)); const {error}=await sbClient.from('secretaria_tickets').delete().eq('id',id); if(error)return showToast(error.message,'error'); await secAudit('Eliminar atención','secretaria_tickets',id,old,null); await loadSecretariaData(); renderSecretariaModule(); }
     window.openSecEdit=openSecEdit; window.deleteSecTicket=deleteSecTicket;
 
-    sbClient.auth.onAuthStateChange(async (event,session)=>{ if(event==='PASSWORD_RECOVERY'){showToast('Ingresa tu nueva contraseña desde el panel de Supabase Auth. Esta versión estática ya recibió la sesión.')} });
+    sbClient.auth.onAuthStateChange(async (event,session)=>{ if(event==='PASSWORD_RECOVERY'){
+      $('loading-screen')?.classList.add('hidden');
+      showAuth();
+      setAuthMode('new-password');
+      showToast('Escribe tu nueva contraseña para completar la recuperación.');
+    } });
     initApp();
   </script>
 </body>
