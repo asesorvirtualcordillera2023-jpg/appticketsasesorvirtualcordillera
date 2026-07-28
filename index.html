@@ -2225,14 +2225,22 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
     function isSecretaryRole(){ return ['secretaria','supervisora_secretaria','admin_secretaria'].includes(normalizeRole(currentProfile?.rol)); }
     function canManageSecretariaProfiles(){ return ['admin','admin_secretaria'].includes(normalizeRole(currentProfile?.rol)); }
     function canViewSecretariaDashboard(){ return ['admin','admin_secretaria','supervisora_secretaria'].includes(normalizeRole(currentProfile?.rol)); }
+    function secFormatMinutes(mins){
+      mins = Number(mins);
+      if(!Number.isFinite(mins) || mins < 0) return '-';
+      mins = Math.round(mins);
+      if(mins < 60) return mins + ' min';
+      const h = Math.floor(mins / 60), m = mins % 60;
+      return h + 'h' + (m ? ' ' + m + 'm' : '');
+    }
     function secTimeLabel(t){
       if(!t) return '-';
-      if(t.estado==='Resuelto' || t.estado==='Cancelado'){
-        const start=new Date(t.created_at||Date.now()), end=new Date(t.valoracion_fecha||t.updated_at||Date.now());
-        const mins=Math.max(0,Math.round((end-start)/60000));
-        if(mins<60) return mins+' min';
-        const h=Math.floor(mins/60), m=mins%60; return h+'h '+(m?m+'m':'');
+      if(t.estado === 'Resuelto'){
+        if(t.resolution_minutes !== null && t.resolution_minutes !== undefined && t.resolution_minutes !== '') return secFormatMinutes(t.resolution_minutes);
+        const mins = minutesBetween(t.created_at, t.resolved_at || t.updated_at || t.valoracion_fecha);
+        return mins === null ? '-' : secFormatMinutes(mins);
       }
+      if(t.estado === 'Cancelado') return 'Cancelado';
       return 'En proceso';
     }
     function secUserPermsFromForm(){ return {notificaciones:$('sec-perm-notificaciones')?.checked!==false, secretaria:$('sec-perm-secretaria')?.checked!==false, reportes:!!$('sec-perm-reportes')?.checked, auditoria:false}; }
@@ -2499,8 +2507,20 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
         canal:$('sec-edit-canal').value,
         descripcion:$('sec-edit-descripcion').value
       };
-      if(nuevo==='Resuelto' && !old.rating_token && !old.valoracion_calificacion) payload.rating_token=randomToken();
-      if(nuevo==='Cancelado') payload.rating_token=null;
+      const nowIso = new Date().toISOString();
+      if(nuevo === 'Resuelto'){
+        if(!old.resolved_at || old.estado !== 'Resuelto'){
+          payload.resolved_at = nowIso;
+          payload.resolution_minutes = minutesBetween(old.created_at, nowIso) ?? 0;
+        }
+        if(!old.rating_token && !old.valoracion_calificacion) payload.rating_token = randomToken();
+      }
+      if(nuevo !== 'Resuelto'){
+        payload.resolved_at = null;
+        payload.resolution_minutes = null;
+      }
+      if(nuevo === 'Cancelado') payload.rating_token = null;
+      payload.last_status_change_at = nowIso;
       const {error}=await sbClient.from('secretaria_tickets').update(payload).eq('id',id);
       if(error)return showToast(error.message,'error');
       let itCreated=null;
