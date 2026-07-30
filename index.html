@@ -162,7 +162,27 @@
       const rows=filteredAuditoria();
       const it=rows.filter(r=>r.modulo==='Soporte IT').length;
       const sec=rows.filter(r=>r.modulo==='Secretaría').length;
-      const html=`<!doctype html><html><head><meta charset="utf-8"><title>Reporte de Auditoría General</title><style>body{font-family:Arial;color:#333}h1{color:#006068}.kpi{display:inline-block;border:1px solid #ddd;border-radius:12px;padding:12px;margin:6px}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#006068;color:#fff}td,th{border:1px solid #ddd;padding:7px}</style></head><body><h1>Reporte de Auditoría General</h1><p>Generado: ${nowEcuador()}</p><div class="kpi"><b>Total:</b> ${rows.length}</div><div class="kpi"><b>Soporte IT:</b> ${it}</div><div class="kpi"><b>Secretaría:</b> ${sec}</div><table><thead><tr><th>Fecha</th><th>Módulo</th><th>Acción</th><th>Usuario</th><th>Registro</th><th>Detalle</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(formatDateTimeEcuador(r.fecha))}</td><td>${esc(r.modulo)}</td><td>${esc(r.accion)}</td><td>${esc(r.usuario)}</td><td>${esc(r.registro)}</td><td>${esc(r.detalle)}</td></tr>`).join('')}</tbody></table></body></html>`;
+      const html=`<!doctype html><html><head><meta charset="utf-8"><title>Reporte de Auditoría General</title><style>body{font-family:Arial;color:#333}h1{color:#006068}.kpi{display:inline-block;border:1px solid #ddd;border-radius:12px;padding:12px;margin:6px}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#006068;color:#fff}td,th{border:1px solid #ddd;padding:7px}</style>
+  <style id="sec-directory-scroll-fix">
+    .sec-dir-table-shell{position:relative;min-width:0;max-width:100%}
+    .sec-dir-table-scroll{overflow:auto;max-width:100%;max-height:62vh;scrollbar-gutter:stable both-edges;overscroll-behavior:contain;background:#fff}
+    .sec-dir-table-scroll table{min-width:980px}
+    .sec-dir-table-scroll thead{position:sticky;top:0;z-index:20;background:#f9fafb}
+    .sec-dir-table-scroll th{white-space:nowrap}
+    .sec-dir-table-scroll::-webkit-scrollbar{width:13px;height:13px}
+    .sec-dir-table-scroll::-webkit-scrollbar-track{background:#e5e7eb;border-radius:999px}
+    .sec-dir-table-scroll::-webkit-scrollbar-thumb{background:linear-gradient(135deg,#00CE7C,#006068);border:3px solid #e5e7eb;border-radius:999px}
+    .sec-dir-action-col{position:sticky;right:0;z-index:15;background:#fff;box-shadow:-8px 0 14px rgba(0,96,104,.08);white-space:nowrap}
+    thead .sec-dir-action-col{z-index:30;background:#f9fafb}
+    tr:hover .sec-dir-action-col{background:#f9fafb}
+    .sec-dir-floating-x-scroll{height:20px;overflow-x:auto;overflow-y:hidden;position:sticky;bottom:0;z-index:40;background:rgba(255,255,255,.97);border-top:1px solid #d1d5db;box-shadow:0 -7px 16px rgba(0,96,104,.14)}
+    .sec-dir-floating-x-scroll>div{height:1px}
+    .sec-dir-floating-x-scroll::-webkit-scrollbar{height:15px}
+    .sec-dir-floating-x-scroll::-webkit-scrollbar-track{background:#e5e7eb;border-radius:999px}
+    .sec-dir-floating-x-scroll::-webkit-scrollbar-thumb{background:linear-gradient(90deg,#00CE7C,#006068);border:3px solid #e5e7eb;border-radius:999px}
+    @media (max-width:1279px){.sec-dir-table-scroll{max-height:58vh}.sec-dir-table-scroll table{min-width:920px}}
+  </style>
+</head><body><h1>Reporte de Auditoría General</h1><p>Generado: ${nowEcuador()}</p><div class="kpi"><b>Total:</b> ${rows.length}</div><div class="kpi"><b>Soporte IT:</b> ${it}</div><div class="kpi"><b>Secretaría:</b> ${sec}</div><table><thead><tr><th>Fecha</th><th>Módulo</th><th>Acción</th><th>Usuario</th><th>Registro</th><th>Detalle</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(formatDateTimeEcuador(r.fecha))}</td><td>${esc(r.modulo)}</td><td>${esc(r.accion)}</td><td>${esc(r.usuario)}</td><td>${esc(r.registro)}</td><td>${esc(r.detalle)}</td></tr>`).join('')}</tbody></table></body></html>`;
       const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'})); a.download='auditoria_general_it_secretaria.html'; a.click();
     }
     document.addEventListener('input', e=>{ if(['aud-search','aud-from','aud-to'].includes(e.target?.id)) renderAuditoriaGeneral(); });
@@ -540,7 +560,15 @@
                 </div>
                 <div class="flex gap-2"><button class="btn btn-green flex-1 py-2"><i class="fa-solid fa-floppy-disk"></i> Guardar directorio</button><button type="button" onclick="clearSecDirectoryForm()" class="btn btn-muted py-2"><i class="fa-solid fa-broom"></i></button></div>
               </form>
-              <div class="xl:col-span-2 overflow-x-auto"><table class="w-full text-left text-sm"><thead class="bg-gray-50"><tr><th class="px-4 py-3">Usuario</th><th class="px-4 py-3">Contacto</th><th class="px-4 py-3">Tipo</th><th class="px-4 py-3 text-center">Acción</th></tr></thead><tbody id="sec-dir-results"></tbody></table></div>
+              <div class="xl:col-span-2 sec-dir-table-shell">
+                <div id="sec-dir-table-scroll" class="sec-dir-table-scroll" tabindex="0" aria-label="Directorio de Secretaría con desplazamiento horizontal y vertical">
+                  <table id="sec-dir-table" class="w-full text-left text-sm">
+                    <thead class="bg-gray-50"><tr><th class="px-4 py-3">Usuario</th><th class="px-4 py-3">Contacto</th><th class="px-4 py-3">Tipo</th><th class="px-4 py-3 text-center sec-dir-action-col">Acción</th></tr></thead>
+                    <tbody id="sec-dir-results"></tbody>
+                  </table>
+                </div>
+                <div id="sec-dir-floating-scroll" class="sec-dir-floating-x-scroll" aria-label="Barra horizontal inferior del Directorio Secretaría"><div id="sec-dir-floating-spacer"></div></div>
+              </div>
             </div>
           </div>
           <div id="sec-users-admin-panel" class="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-6"><div class="bg-white rounded-2xl border p-6"><h3 class="font-semibold text-instVerdeOscuro mb-4"><i class="fa-solid fa-user-plus mr-2"></i>Secretarias / Supervisora</h3><form id="sec-form-user" class="space-y-3"><input id="sec-user-id" type="hidden"><input id="sec-user-name" class="field" placeholder="Nombre" required><input id="sec-user-email" class="field" placeholder="Correo"><select id="sec-user-role" class="field"><option value="secretaria">Secretaria</option><option value="supervisora">Supervisora</option><option value="admin">Admin Secretaría</option></select><div class="border rounded-xl p-3 bg-gray-50"><p class="text-xs font-bold text-instVerdeOscuro mb-2">Módulos activos</p><label class="flex items-center gap-2 text-sm"><input id="sec-perm-notificaciones" type="checkbox" checked> Notificaciones</label><label class="flex items-center gap-2 text-sm"><input id="sec-perm-secretaria" type="checkbox" checked> Atención Secretaría</label><label class="flex items-center gap-2 text-sm"><input id="sec-perm-reportes" type="checkbox" checked> Reportes de Secretaría</label></div><label class="flex items-center gap-2 text-sm"><input id="sec-user-active" type="checkbox" checked> Activo</label><button class="btn btn-primary w-full py-2">Guardar perfil</button></form></div><div class="xl:col-span-2 bg-white rounded-2xl border overflow-hidden"><div class="p-4 bg-gray-50 border-b"><h3 class="font-semibold">Personal de Secretaría</h3></div><div id="sec-users-list" class="p-4 grid md:grid-cols-2 gap-3"></div></div></div>
@@ -2476,6 +2504,42 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
     async function toggleSecUser(id,activo){ const {error}=await sbClient.from('secretaria_usuarios').update({activo}).eq('id',id); if(error)return showToast(error.message,'error'); await secAudit(activo?'Activar secretaria':'Inactivar secretaria','secretaria_usuarios',id,null,{activo}); await loadSecretariaData(); renderSecretariaModule(); }
     async function deleteSecUser(id){ if(!confirm('¿Eliminar perfil de Secretaría?'))return; const old=secretariaUsersData.find(u=>String(u.id)===String(id)); const {error}=await sbClient.from('secretaria_usuarios').delete().eq('id',id); if(error)return showToast(error.message,'error'); await secAudit('Eliminar perfil Secretaría','secretaria_usuarios',id,old,null); await loadSecretariaData(); renderSecretariaModule(); }
     window.editSecUser=editSecUser; window.toggleSecUser=toggleSecUser; window.deleteSecUser=deleteSecUser;
+
+    function refreshSecDirectoryFloatingScrollbar(){
+      const target=$('sec-dir-table-scroll');
+      const bar=$('sec-dir-floating-scroll');
+      const spacer=$('sec-dir-floating-spacer');
+      if(!target||!bar||!spacer) return;
+      const width=Math.max(target.scrollWidth,target.clientWidth);
+      spacer.style.width=width+'px';
+      bar.style.display=target.scrollWidth>target.clientWidth+2?'block':'none';
+      if(!bar.dataset.syncing) bar.scrollLeft=target.scrollLeft;
+    }
+    function initSecDirectoryFloatingScrollbar(){
+      const target=$('sec-dir-table-scroll');
+      const bar=$('sec-dir-floating-scroll');
+      if(!target||!bar||target.dataset.floatReady==='1') return;
+      target.dataset.floatReady='1';
+      let syncing=false;
+      target.addEventListener('scroll',()=>{
+        if(syncing) return;
+        syncing=true; bar.dataset.syncing='1'; bar.scrollLeft=target.scrollLeft;
+        requestAnimationFrame(()=>{syncing=false;delete bar.dataset.syncing});
+      },{passive:true});
+      bar.addEventListener('scroll',()=>{
+        if(syncing) return;
+        syncing=true; target.scrollLeft=bar.scrollLeft;
+        requestAnimationFrame(()=>syncing=false);
+      },{passive:true});
+      if(window.ResizeObserver){
+        const ro=new ResizeObserver(()=>refreshSecDirectoryFloatingScrollbar());
+        ro.observe(target);
+        const table=$('sec-dir-table'); if(table) ro.observe(table);
+      }
+      window.addEventListener('resize',refreshSecDirectoryFloatingScrollbar,{passive:true});
+      refreshSecDirectoryFloatingScrollbar();
+    }
+
     function secDirectoryRows(){
       const q=normalizeTextForSearch($('sec-dir-filter')?.value||'');
       return directorioData.filter(u=>{
@@ -2488,7 +2552,8 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
     function renderSecDirectoryList(){
       const body=$('sec-dir-results'); if(!body) return;
       const rows=secDirectoryRows();
-      body.innerHTML=rows.map(u=>`<tr class="border-t hover:bg-gray-50"><td class="px-4 py-3"><b class="text-instVerdeOscuro">${esc(u.nombres||'')}</b><div class="text-xs text-gray-500">${esc(u.cedula||'')}</div><div class="text-xs text-gray-500">${esc(u.carrera||u.periodo||'')}</div></td><td class="px-4 py-3 text-xs"><div>${esc(u.correo||'')}</div><div>${esc(u.correo_personal||'')}</div><div>${esc(u.celular||'')} ${u.whatsapp?('· '+esc(u.whatsapp)):''}</div></td><td class="px-4 py-3"><span class="px-2 py-1 rounded-full bg-green-50 text-green-700 text-xs font-bold">${esc(normalizeUserType(u.tipo||''))}</span></td><td class="px-4 py-3 text-center"><button onclick="fillSecDirectoryForm('${esc(u.id)}')" class="text-blue-600 font-bold"><i class="fa-solid fa-pen"></i> Editar</button></td></tr>`).join('') || '<tr><td colspan="4" class="p-8 text-center text-gray-400">No hay registros para el filtro.</td></tr>';
+      body.innerHTML=rows.map(u=>`<tr class="border-t hover:bg-gray-50"><td class="px-4 py-3"><b class="text-instVerdeOscuro">${esc(u.nombres||'')}</b><div class="text-xs text-gray-500">${esc(u.cedula||'')}</div><div class="text-xs text-gray-500">${esc(u.carrera||u.periodo||'')}</div></td><td class="px-4 py-3 text-xs"><div>${esc(u.correo||'')}</div><div>${esc(u.correo_personal||'')}</div><div>${esc(u.celular||'')} ${u.whatsapp?('· '+esc(u.whatsapp)):''}</div></td><td class="px-4 py-3"><span class="px-2 py-1 rounded-full bg-green-50 text-green-700 text-xs font-bold">${esc(normalizeUserType(u.tipo||''))}</span></td><td class="px-4 py-3 text-center sec-dir-action-col"><button onclick="fillSecDirectoryForm('${esc(u.id)}')" class="text-blue-600 font-bold"><i class="fa-solid fa-pen"></i> Editar</button></td></tr>`).join('') || '<tr><td colspan="4" class="p-8 text-center text-gray-400">No hay registros para el filtro.</td></tr>';
+      requestAnimationFrame(refreshSecDirectoryFloatingScrollbar);
     }
     function clearSecDirectoryForm(){ ['sec-dir-id','sec-dir-cedula','sec-dir-nombres','sec-dir-correo','sec-dir-correo-personal','sec-dir-celular','sec-dir-whatsapp','sec-dir-carrera','sec-dir-nivel','sec-dir-periodo'].forEach(id=>{if($(id))$(id).value=''}); if($('sec-dir-tipo')) $('sec-dir-tipo').value='Estudiante'; }
     function fillSecDirectoryForm(id){ const u=directorioData.find(x=>String(x.id)===String(id)); if(!u) return; $('sec-dir-id').value=u.id||''; $('sec-dir-cedula').value=u.cedula||''; $('sec-dir-nombres').value=u.nombres||''; $('sec-dir-correo').value=u.correo||''; $('sec-dir-correo-personal').value=u.correo_personal||''; $('sec-dir-celular').value=u.celular||''; $('sec-dir-whatsapp').value=u.whatsapp||''; $('sec-dir-tipo').value=secretariaAllowedUserType(u.tipo||'Estudiante'); $('sec-dir-carrera').value=u.carrera||''; $('sec-dir-nivel').value=u.nivel||''; $('sec-dir-periodo').value=u.periodo||''; showToast('Datos cargados para edición'); }
@@ -2698,6 +2763,7 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       setAuthMode('new-password');
       showToast('Escribe tu nueva contraseña para completar la recuperación.');
     } });
+    initSecDirectoryFloatingScrollbar();
     initApp();
   </script>
 </body>
