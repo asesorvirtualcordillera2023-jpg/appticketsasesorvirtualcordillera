@@ -30,7 +30,7 @@
       const role = secRoleToAgentRole(sec.rol);
       const permisos = normalizePermissions(role, sec.permisos || {});
       const payload = {
-        auth_user_id: currentUser?.id || existingAgent?.auth_user_id || null,
+        auth_user_id: existingAgent?.auth_user_id || (normalizeEmail(sec.email||'')===normalizeEmail(currentUser?.email||'') ? currentUser?.id : null) || null,
         nombre_completo: sec.nombre,
         email: sec.email,
         rol: role,
@@ -53,12 +53,18 @@
       if(error) throw error;
       return data;
     }
-    async function syncSecretariaAccessProfile(payload){
+    async function syncSecretariaAccessProfile(payload, secretariaId=null){
       try{
-        if(!payload?.email) return;
+        if(!payload?.email) return null;
         const sec = {nombre:payload.nombre,email:payload.email,rol:payload.rol,activo:payload.activo!==false,permisos:payload.permisos||{}};
-        await ensureSecretariaAgentProfile(sec);
-      }catch(e){ console.warn('No se pudo sincronizar perfil de acceso Secretaría', e); }
+        const agent = await ensureSecretariaAgentProfile(sec);
+        const authId = agent?.auth_user_id || (normalizeEmail(payload.email||'')===normalizeEmail(currentUser?.email||'') ? currentUser?.id : null);
+        if(secretariaId && authId){
+          const {error}=await sbClient.from('secretaria_usuarios').update({auth_user_id:authId}).eq('id',secretariaId);
+          if(error) console.warn('No se pudo vincular auth_user_id con Secretaría', error);
+        }
+        return agent;
+      }catch(e){ console.warn('No se pudo sincronizar perfil de acceso Secretaría', e); return null; }
     }
     function copySecAccessLink(id){
       const u = secretariaUsersData.find(x=>String(x.id)===String(id));
@@ -317,6 +323,7 @@
         <button onclick="switchTab('tab-periodos')" id="btn-tab-periodos" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-calendar-days w-5 text-center"></i> Periodos Académicos</button>
         <button onclick="switchTab('tab-sec-nueva')" id="btn-tab-sec-nueva" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-ticket w-5 text-center"></i> Nueva Atención</button>
         <button onclick="switchTab('tab-sec-registros')" id="btn-tab-sec-registros" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-list-check w-5 text-center"></i> Tickets Secretaría</button>
+        <button onclick="switchTab('tab-sec-transferencias')" id="btn-tab-sec-transferencias" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-right-left w-5 text-center"></i> Transferencias</button>
         <button onclick="switchTab('tab-sec-directorio')" id="btn-tab-sec-directorio" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-address-book w-5 text-center"></i> Directorio Secretaría</button>
         <button onclick="switchTab('tab-sec-dashboard')" id="btn-tab-sec-dashboard" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-chart-pie w-5 text-center"></i> Dashboard Secretaría</button>
         <button onclick="switchTab('tab-sec-reportes')" id="btn-tab-sec-reportes" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-file-export w-5 text-center"></i> Reportes Secretaría</button>
@@ -528,6 +535,7 @@
           <div id="sec-subnav" class="flex flex-wrap gap-2 mb-5">
             <button data-sec-view-btn="nueva" onclick="switchTab('tab-sec-nueva')" class="btn btn-muted px-4 py-2"><i class="fa-solid fa-ticket"></i> Nueva atención</button>
             <button data-sec-view-btn="registros" onclick="switchTab('tab-sec-registros')" class="btn btn-muted px-4 py-2"><i class="fa-solid fa-list-check"></i> Tickets / registros</button>
+            <button data-sec-view-btn="transferencias" onclick="switchTab('tab-sec-transferencias')" class="btn btn-muted px-4 py-2"><i class="fa-solid fa-right-left"></i> Transferencias</button>
             <button data-sec-view-btn="directorio" onclick="switchTab('tab-sec-directorio')" class="btn btn-muted px-4 py-2"><i class="fa-solid fa-address-book"></i> Directorio Secretaría</button>
             <button data-sec-view-btn="dashboard" onclick="switchTab('tab-sec-dashboard')" class="btn btn-muted px-4 py-2"><i class="fa-solid fa-chart-pie"></i> Dashboard Secretaría</button>
           </div>
@@ -537,6 +545,13 @@
           <div id="sec-main-split" class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div id="sec-new-card" class="bg-white rounded-2xl shadow-sm border p-5 h-fit"><div class="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-4"><div><h3 class="font-semibold text-instVerdeOscuro"><i class="fa-solid fa-ticket mr-2"></i>Nueva atención</h3><p class="text-xs text-gray-500">Formulario compacto. Para una secretaria, la asignación se fija automáticamente a su propio usuario.</p></div><div id="sec-auto-assignment-note" class="sec-auto-assignment hidden"></div></div><form id="sec-form-ticket" class="sec-new-form-grid grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3"><div><label>Tipo de usuario</label><select id="sec-user-type" class="field"><option>Estudiante</option><option>Docente</option><option>Administrativo</option><option>Externo</option></select></div><div class="md:col-span-1 xl:col-span-3"><label>Buscar en directorio</label><input id="sec-search-student" class="field" placeholder="Nombre, cédula, correo, carrera o tipo"></div><div class="md:col-span-2 xl:col-span-4"><label>Persona del directorio</label><select id="sec-student" class="field" size="4"></select></div><div><label>Nombre completo</label><input id="sec-nombre" class="field" placeholder="Nombre externo/manual"></div><div><label>Cédula / identificación</label><input id="sec-cedula" class="field" placeholder="Cédula / identificación"></div><div><label>Correo institucional</label><input id="sec-correo" class="field" placeholder="Correo institucional"></div><div><label>Correo personal</label><input id="sec-correo-personal" class="field" placeholder="Correo personal"></div><div><label>Celular</label><input id="sec-celular" class="field" placeholder="Celular"></div><div><label>WhatsApp</label><input id="sec-whatsapp" class="field" placeholder="WhatsApp"></div><div class="md:col-span-2"><label>Requerimiento</label><input id="sec-asunto" class="field" placeholder="Requerimiento" required></div><div><label>Categoría</label><select id="sec-categoria" class="field"></select></div><div><label>Canal</label><select id="sec-canal" class="field"></select></div><div class="md:col-span-2 xl:col-span-2"><label>Secretaria responsable</label><select id="sec-secretaria" class="field"></select></div><div class="md:col-span-2 xl:col-span-2"><label>Detalle de la atención</label><textarea id="sec-descripcion" class="field" rows="2" placeholder="Detalle de la atención"></textarea></div><button class="btn btn-green py-2 md:col-span-2 xl:col-span-4"><i class="fa-solid fa-floppy-disk"></i> Guardar atención</button></form></div>
             <div id="sec-tickets-card" class="xl:col-span-2 bg-white rounded-2xl shadow-sm border overflow-hidden"><div class="p-4 border-b bg-gray-50 flex flex-col md:flex-row gap-3 md:items-center md:justify-between"><div><h3 class="font-semibold">Tickets de Secretaría</h3><p class="text-xs text-gray-500">Descripción de la asignación y tiempo de atención del requerimiento.</p></div><div class="flex flex-wrap items-center gap-2"><a href="plantilla_secretaria_atenciones.xls" download class="btn btn-muted px-3 py-2 text-xs"><i class="fa-solid fa-download"></i> Plantilla XLS</a><label class="btn btn-green px-3 py-2 text-xs cursor-pointer"><i class="fa-solid fa-file-import"></i> Importar XLS/CSV<input type="file" id="sec-xls-file" accept=".csv,.xls,.xlsx" class="hidden" onchange="handleSecretariaXLSUpload(event)"></label><input id="sec-filter" class="field py-2 w-72" placeholder="Filtrar atenciones..."></div></div><div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="bg-gray-50"><tr><th class="px-4 py-3">Ticket</th><th class="px-4 py-3">Usuario</th><th class="px-4 py-3">Caso</th><th class="px-4 py-3">Asignación</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3">Tiempo</th><th class="px-4 py-3">Valoración</th><th class="px-4 py-3 text-center">Acciones</th></tr></thead><tbody id="sec-tickets-body"></tbody></table></div></div>
+          </div>
+          <div id="sec-transfers-card" class="hidden bg-white rounded-2xl shadow-sm border overflow-hidden mt-6">
+            <div class="p-4 border-b bg-gray-50 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+              <div><h3 class="font-semibold text-instVerdeOscuro"><i class="fa-solid fa-right-left mr-2"></i>Transferencias entre secretarias</h3><p class="text-xs text-gray-500">Bandeja de transferencias recibidas y enviadas. El ticket cambia de responsable inmediatamente y conserva la trazabilidad.</p></div>
+              <div class="flex gap-2"><select id="sec-transfer-filter" class="field py-2 w-44"><option value="">Todas</option><option value="recibidas">Recibidas</option><option value="enviadas">Enviadas</option><option value="Pendiente">Pendientes</option><option value="Recibida">Confirmadas</option></select><button onclick="loadSecretariaData().then(()=>renderSecretariaModule())" class="btn btn-muted px-3 py-2"><i class="fa-solid fa-rotate"></i> Actualizar</button></div>
+            </div>
+            <div class="overflow-auto max-h-[58vh]"><table class="w-full min-w-[1050px] text-left text-sm"><thead class="bg-gray-50 sticky top-0 z-10"><tr><th class="px-4 py-3">Ticket</th><th class="px-4 py-3">Origen</th><th class="px-4 py-3">Destino</th><th class="px-4 py-3">Motivo</th><th class="px-4 py-3">Fecha</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3 text-center">Acción</th></tr></thead><tbody id="sec-transfers-body"></tbody></table></div>
           </div>
           <div id="sec-directory-card" class="hidden bg-white rounded-2xl shadow-sm border overflow-hidden mt-6">
             <div class="p-4 border-b bg-gray-50 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
@@ -796,7 +811,7 @@
     function normalizePeriodos(){ const raw=configData?.periodos||[]; return raw.map((p,i)=> typeof p==='string' ? {nombre:p, activo:p===configData?.periodo_activo, habilitado:true} : {nombre:p.nombre||p.label||'', activo:!!p.activo, habilitado:p.habilitado!==false}).filter(p=>p.nombre); }
     function commitPeriodos(list){ configData.periodos=list; const active=list.find(p=>p.activo&&p.habilitado!==false)||list.find(p=>p.habilitado!==false)||list[0]; configData.periodo_activo=active?active.nombre:''; }
     function currentAcademicPeriod(){ const list=normalizePeriodos(); const active=list.find(p=>p.activo&&p.habilitado!==false); return active?.nombre || list.find(p=>p.habilitado!==false)?.nombre || configData?.periodo_activo || ''; }
-    let currentUser = null, currentProfile = null, ticketsData = [], directorioData = [], agentsData = [], notificationsData = [], invitationsData = [], secretariaTicketsData = [], secretariaReportData = [], secretariaUsersData = [], secretariaAuditData = [], configData = defaultConfig;
+    let currentUser = null, currentProfile = null, ticketsData = [], directorioData = [], agentsData = [], notificationsData = [], invitationsData = [], secretariaTicketsData = [], secretariaTransfersData = [], secretariaReportData = [], secretariaUsersData = [], secretariaAuditData = [], configData = defaultConfig;
     let activeSecView = 'registros';
     let charts = {};
     const $ = id => document.getElementById(id);
@@ -907,7 +922,7 @@
     function userPermissions(){ return normalizePermissions(currentProfile?.rol, currentProfile?.permisos); }
     function hasModuleAccess(tabId){
       if(isAdmin()) return true;
-      if(['tab-secretaria','tab-sec-nueva','tab-sec-registros','tab-sec-directorio'].includes(tabId)) return !!userPermissions().secretaria;
+      if(['tab-secretaria','tab-sec-nueva','tab-sec-registros','tab-sec-transferencias','tab-sec-directorio'].includes(tabId)) return !!userPermissions().secretaria;
       if(tabId==='tab-sec-dashboard') return !!userPermissions().secretaria && canViewSecretariaDashboard();
       if(tabId==='tab-sec-reportes') return !!userPermissions().reportes_secretaria;
       const mod = MODULE_PERMISSIONS.find(m => m.tab === tabId || ('tab-'+m.key) === tabId);
@@ -915,7 +930,7 @@
       return !!userPermissions()[mod.key];
     }
     function firstAllowedTab(){
-      const order = ['tab-notificaciones','tab-form','tab-registros','tab-dashboard','tab-reportes','tab-informe','tab-directorio','tab-agentes','tab-periodos','tab-sec-registros','tab-sec-nueva','tab-sec-directorio','tab-sec-dashboard','tab-sec-reportes','tab-auditoria','tab-config'];
+      const order = ['tab-notificaciones','tab-form','tab-registros','tab-dashboard','tab-reportes','tab-informe','tab-directorio','tab-agentes','tab-periodos','tab-sec-registros','tab-sec-transferencias','tab-sec-nueva','tab-sec-directorio','tab-sec-dashboard','tab-sec-reportes','tab-auditoria','tab-config'];
       return order.find(hasModuleAccess) || 'tab-form';
     }
     function permissionsSummary(perms, role){
@@ -1105,6 +1120,10 @@
         const u=await sbClient.from('secretaria_usuarios').select('*').order('activo',{ascending:false}).order('nombre',{ascending:true});
         if(u.error) throw u.error;
         secretariaUsersData=u.data||[];
+        const linked=currentSecretariaProfile();
+        if(linked && currentUser?.id && String(linked.auth_user_id||'')!==String(currentUser.id)){
+          try{ await sbClient.from('secretaria_usuarios').update({auth_user_id:currentUser.id}).eq('id',linked.id); linked.auth_user_id=currentUser.id; }catch(e){ console.warn('No se pudo vincular el acceso actual de Secretaría',e); }
+        }
         let ticketQuery=sbClient.from('secretaria_tickets').select('*').order('created_at',{ascending:false}).limit(500);
         if(normalizeRole(currentProfile?.rol)==='secretaria'){
           const own=currentSecretariaProfile();
@@ -1119,9 +1138,11 @@
           if(t.error) throw t.error;
           secretariaTicketsData=t.data||[];
         }
+        const tr=await sbClient.from('secretaria_transferencias').select('*').order('created_at',{ascending:false}).limit(1000);
+        secretariaTransfersData=tr.error?[]:(tr.data||[]);
         const a=await sbClient.from('secretaria_auditoria').select('*').order('created_at',{ascending:false}).limit(100);
         secretariaAuditData=a.error?[]:(a.data||[]);
-      }catch(e){ console.warn('Módulo Secretaría no disponible hasta ejecutar SQL_MIGRACION_SECRETARIA_ATENCION.sql', e); secretariaTicketsData=[]; secretariaUsersData=[]; secretariaAuditData=[]; }
+      }catch(e){ console.warn('Módulo Secretaría no disponible hasta ejecutar las migraciones.', e); secretariaTicketsData=[]; secretariaTransfersData=[]; secretariaUsersData=[]; secretariaAuditData=[]; }
     }
     async function loadNotifications(){ if(!currentProfile?.id){notificationsData=[];return;} const {data,error}=await sbClient.from('notificaciones').select('*').eq('agent_id',currentProfile.id).order('created_at',{ascending:false}).limit(100); if(error){ console.warn('No se pudieron cargar notificaciones', error); notificationsData=[]; return; } notificationsData=data||[]; updateNotificationBadge(); }
     async function loadInvitations(){ if(!isAdmin()){ invitationsData=[]; return; } const {data,error}=await sbClient.from('invitaciones_agentes').select('*').order('created_at',{ascending:false}).limit(50); if(error){ console.warn('No se pudieron cargar invitaciones', error); invitationsData=[]; return; } invitationsData=data||[]; }
@@ -1180,7 +1201,7 @@
     window.logout=logout;
 
     function switchTab(tabId){
-      const secViewByTab = {'tab-secretaria':'registros','tab-sec-nueva':'nueva','tab-sec-registros':'registros','tab-sec-directorio':'directorio','tab-sec-dashboard':'dashboard'};
+      const secViewByTab = {'tab-secretaria':'registros','tab-sec-nueva':'nueva','tab-sec-registros':'registros','tab-sec-transferencias':'transferencias','tab-sec-directorio':'directorio','tab-sec-dashboard':'dashboard'};
       if(secViewByTab[tabId]) activeSecView = secViewByTab[tabId];
       if(!hasModuleAccess(tabId)){
         showToast('No tienes permiso para acceder a este módulo','error');
@@ -2408,6 +2429,35 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       if(!own) return [];
       return secretariaTicketsData.filter(t=>String(t.secretaria_id||'')===String(own.id)||normalizeTextForSearch(t.secretaria_nombre||'')===normalizeTextForSearch(own.nombre||''));
     }
+    function secretariaVisibleTransfersData(){
+      if(canViewAllSecretariaTickets()) return [...secretariaTransfersData];
+      const own=currentSecretariaProfile();
+      if(!own) return [];
+      return secretariaTransfersData.filter(r=>String(r.secretaria_origen_id||'')===String(own.id)||String(r.secretaria_destino_id||'')===String(own.id));
+    }
+    function renderSecretariaTransfers(){
+      const body=$('sec-transfers-body'); if(!body) return;
+      const own=currentSecretariaProfile();
+      const filter=$('sec-transfer-filter')?.value||'';
+      let rows=secretariaVisibleTransfersData();
+      if(filter==='recibidas' && own) rows=rows.filter(r=>String(r.secretaria_destino_id||'')===String(own.id));
+      else if(filter==='enviadas' && own) rows=rows.filter(r=>String(r.secretaria_origen_id||'')===String(own.id));
+      else if(filter) rows=rows.filter(r=>String(r.estado||'')===filter);
+      body.innerHTML=rows.map(r=>{
+        const isDest=own && String(r.secretaria_destino_id||'')===String(own.id);
+        const pending=String(r.estado||'Pendiente')==='Pendiente';
+        const badge=pending?'bg-orange-100 text-orange-700':'bg-green-100 text-green-700';
+        return `<tr class="border-t hover:bg-gray-50"><td class="px-4 py-3"><b class="text-instVerdeOscuro">${esc(r.ticket_codigo||'')}</b></td><td class="px-4 py-3">${esc(r.secretaria_origen_nombre||'Sin asignar')}</td><td class="px-4 py-3"><b>${esc(r.secretaria_destino_nombre||'')}</b></td><td class="px-4 py-3 max-w-md whitespace-pre-wrap">${esc(r.comentario||'')}</td><td class="px-4 py-3 text-xs text-gray-500">${esc(formatDateTimeEcuador(r.created_at))}</td><td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-bold ${badge}">${esc(r.estado||'Pendiente')}</span></td><td class="px-4 py-3 text-center">${isDest&&pending?`<button onclick="markSecretariaTransferReceived('${r.id}')" class="btn btn-green px-3 py-2 text-xs"><i class="fa-solid fa-check"></i> Marcar recibida</button>`:'<span class="text-xs text-gray-400">Sin acción</span>'}</td></tr>`;
+      }).join('')||'<tr><td colspan="7" class="p-8 text-center text-gray-400">No existen transferencias para este usuario.</td></tr>';
+    }
+    async function markSecretariaTransferReceived(id){
+      const own=currentSecretariaProfile(); if(!own) return showToast('No se encontró tu perfil activo de Secretaría.','error');
+      const {error}=await sbClient.from('secretaria_transferencias').update({estado:'Recibida',received_at:new Date().toISOString()}).eq('id',id).eq('secretaria_destino_id',own.id);
+      if(error) return showToast(error.message,'error');
+      await loadSecretariaData(); renderSecretariaModule(); showToast('Transferencia marcada como recibida.');
+    }
+    window.markSecretariaTransferReceived=markSecretariaTransferReceived;
+
     function localSecretariaReportScope(){
       if(canViewAllSecretariaReports()) return [...secretariaTicketsData];
       const sec=currentSecretariaProfile();
@@ -2507,6 +2557,7 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       const dashCard=$('sec-dashboard-card'); if(dashCard) dashCard.classList.toggle('hidden', !(view==='dashboard' && canViewSecretariaDashboard()));
       const newCard=$('sec-new-card'); if(newCard){ newCard.classList.toggle('hidden', view!=='nueva'); newCard.classList.toggle('xl:col-span-3',view==='nueva'); }
       const ticketsCard=$('sec-tickets-card'); if(ticketsCard){ ticketsCard.classList.toggle('hidden', view!=='registros'); ticketsCard.classList.toggle('xl:col-span-3', view==='registros'); ticketsCard.classList.toggle('xl:col-span-2', view!=='registros'); }
+      const transfersCard=$('sec-transfers-card'); if(transfersCard) transfersCard.classList.toggle('hidden', view!=='transferencias');
       const dirCard=$('sec-directory-card'); if(dirCard) dirCard.classList.toggle('hidden', view!=='directorio');
       const usersPanel=$('sec-users-admin-panel'); if(usersPanel) usersPanel.classList.toggle('hidden', !(canManageSecretariaProfiles() && view==='registros'));
       const visibleTickets=secretariaVisibleTicketsData();
@@ -2531,22 +2582,24 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
         }
         const note=$('sec-auto-assignment-note'); if(note){note.classList.toggle('hidden',!lock);note.innerHTML=lock?(own?`<i class="fa-solid fa-user-check mr-1"></i> Se asignará automáticamente a <b>${esc(own.nombre)}</b>.`:'<i class="fa-solid fa-triangle-exclamation mr-1"></i> Tu correo no está vinculado a una secretaria activa.') : '';}
       }
-      const body=$('sec-tickets-body'); if(body){ const q=($('sec-filter')?.value||'').toLowerCase(); const rows=visibleTickets.filter(t=>!q||[t.codigo,t.nombre,t.cedula,t.asunto,t.categoria,t.estado,t.secretaria_nombre].some(v=>String(v||'').toLowerCase().includes(q))); body.innerHTML=rows.map(t=>{const url=`${appBaseUrl()}#rate_atencion=${t.id}&token=${t.rating_token||''}`; const phone=normalizeWhatsAppNumber(t.whatsapp||t.celular||''); const msg=buildInstitutionalRatingMessage(t.nombre||'Usuario',t.secretaria_nombre||'Atención Secretaría',url); const wa=phone?'https://api.whatsapp.com/send?phone='+phone+'&text='+encodeURIComponent(msg):'https://api.whatsapp.com/send?text='+encodeURIComponent(msg); const mail='mailto:'+encodeURIComponent(t.correo||'')+'?subject=Valoración de atención - Instituto Cordillera&body='+encodeURIComponent(msg); const mailPersonal='mailto:'+encodeURIComponent(t.correo_personal||'')+'?subject=Valoración de atención - Instituto Cordillera&body='+encodeURIComponent(msg); return `<tr class="border-t hover:bg-gray-50"><td class="px-4 py-3"><b class="text-instVerdeOscuro">${esc(t.codigo)}</b><div class="text-xs text-gray-500">${esc(formatDateTimeEcuador(t.created_at))}</div></td><td class="px-4 py-3">${esc(t.nombre)}<div class="text-xs text-gray-500">${esc(t.usuario_tipo)} · ${esc(t.cedula||'')}</div></td><td class="px-4 py-3">${esc(t.asunto)}<div class="text-xs text-gray-500">${esc(t.categoria||'')}</div></td><td class="px-4 py-3"><b>${esc(t.secretaria_nombre||'Sin asignar')}</b>${t.secretaria_nombre?`<div class="text-xs text-green-600">${esc(t.codigo)} asignado a ${esc(t.secretaria_nombre)}</div>`:''}</td><td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-bold ${t.estado==='Resuelto'?'bg-green-100 text-green-700':t.estado==='Cancelado'?'bg-gray-100 text-gray-600':'bg-orange-100 text-orange-700'}">${esc(t.estado)}</span>${t.transferido_it?'<div class="text-xs text-blue-600 font-bold">Transferido a IT</div>':''}</td><td class="px-4 py-3 text-xs text-gray-600">${esc(secTimeLabel(t))}</td><td class="px-4 py-3 text-xs">${Number(t.valoracion_calificacion||0)>0?`<div class="text-yellow-500 font-bold">${Array.from({length:Number(t.valoracion_calificacion||0)},()=>'★').join('')}</div><div class="text-gray-500 max-w-[180px] truncate" title="${esc(t.valoracion_comentario||'')}">${esc(t.valoracion_comentario||'Sin comentario')}</div>`:'<span class="text-gray-400 italic">Pendiente</span>'}</td><td class="px-4 py-3 text-center whitespace-nowrap"><button onclick='openSecEdit(${JSON.stringify(t).replaceAll("'","&#39;")})' class="text-blue-600 mx-1"><i class="fa-solid fa-pen"></i></button><button onclick='openSecEdit(${JSON.stringify(t).replaceAll("'","&#39;")},true)' class="text-purple-600 mx-1" title="Transferir entre secretarias"><i class="fa-solid fa-right-left"></i></button>${t.rating_token?`<button onclick="navigator.clipboard.writeText('${url}');showToast('URL de valoración copiada')" class="text-yellow-500 mx-1"><i class="fa-solid fa-star"></i></button><a href="${wa}" target="_blank" class="text-green-600 mx-1"><i class="fa-brands fa-whatsapp"></i></a><a href="${mail}" class="text-blue-500 mx-1" title="Correo institucional"><i class="fa-solid fa-envelope"></i></a><a href="${mailPersonal}" class="text-indigo-500 mx-1 ${t.correo_personal?'':'hidden'}" title="Correo personal"><i class="fa-solid fa-at"></i></a><button type="button" onclick='openTeamsRating(${JSON.stringify(t.correo||'').replaceAll("'","&#39;")},${JSON.stringify(msg).replaceAll("'","&#39;")})' class="text-purple-600 mx-1 ${t.correo?'':'hidden'}" title="Teams: copiar mensaje y abrir chat"><i class="fa-brands fa-microsoft"></i></button>`:''}<button onclick="deleteSecTicket('${t.id}')" class="text-red-600 mx-1"><i class="fa-solid fa-trash"></i></button></td></tr>`}).join('')||'<tr><td colspan="8" class="p-8 text-center text-gray-400">No hay atenciones asignadas a esta secretaria.</td></tr>'; }
+      const body=$('sec-tickets-body'); if(body){ const q=($('sec-filter')?.value||'').toLowerCase(); const rows=visibleTickets.filter(t=>!q||[t.codigo,t.nombre,t.cedula,t.asunto,t.categoria,t.estado,t.secretaria_nombre].some(v=>String(v||'').toLowerCase().includes(q))); body.innerHTML=rows.map(t=>{const url=`${appBaseUrl()}#rate_atencion=${t.id}&token=${t.rating_token||''}`; const phone=normalizeWhatsAppNumber(t.whatsapp||t.celular||''); const msg=buildInstitutionalRatingMessage(t.nombre||'Usuario',t.secretaria_nombre||'Atención Secretaría',url); const wa=phone?'https://api.whatsapp.com/send?phone='+phone+'&text='+encodeURIComponent(msg):'https://api.whatsapp.com/send?text='+encodeURIComponent(msg); const mail='mailto:'+encodeURIComponent(t.correo||'')+'?subject=Valoración de atención - Instituto Cordillera&body='+encodeURIComponent(msg); const mailPersonal='mailto:'+encodeURIComponent(t.correo_personal||'')+'?subject=Valoración de atención - Instituto Cordillera&body='+encodeURIComponent(msg); return `<tr class="border-t hover:bg-gray-50"><td class="px-4 py-3"><b class="text-instVerdeOscuro">${esc(t.codigo)}</b><div class="text-xs text-gray-500">${esc(formatDateTimeEcuador(t.created_at))}</div></td><td class="px-4 py-3">${esc(t.nombre)}<div class="text-xs text-gray-500">${esc(t.usuario_tipo)} · ${esc(t.cedula||'')}</div></td><td class="px-4 py-3">${esc(t.asunto)}<div class="text-xs text-gray-500">${esc(t.categoria||'')}</div></td><td class="px-4 py-3"><b>${esc(t.secretaria_nombre||'Sin asignar')}</b>${t.secretaria_nombre?`<div class="text-xs text-green-600">${esc(t.codigo)} asignado a ${esc(t.secretaria_nombre)}</div>`:''}</td><td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-bold ${t.estado==='Resuelto'?'bg-green-100 text-green-700':t.estado==='Cancelado'?'bg-gray-100 text-gray-600':'bg-orange-100 text-orange-700'}">${esc(t.estado)}</span>${t.transferido_it?'<div class="text-xs text-blue-600 font-bold">Transferido a IT</div>':''}</td><td class="px-4 py-3 text-xs text-gray-600">${esc(secTimeLabel(t))}</td><td class="px-4 py-3 text-xs">${Number(t.valoracion_calificacion||0)>0?`<div class="text-yellow-500 font-bold">${Array.from({length:Number(t.valoracion_calificacion||0)},()=>'★').join('')}</div><div class="text-gray-500 max-w-[180px] truncate" title="${esc(t.valoracion_comentario||'')}">${esc(t.valoracion_comentario||'Sin comentario')}</div>`:'<span class="text-gray-400 italic">Pendiente</span>'}</td><td class="px-4 py-3 text-center whitespace-nowrap"><button onclick='openSecEdit(${JSON.stringify(t).replaceAll("'","&#39;")})' class="text-blue-600 mx-1"><i class="fa-solid fa-pen"></i></button><button onclick='openSecEdit(${JSON.stringify(t).replaceAll("'","&#39;")},true)' class="text-purple-600 mx-1" title="Transferir entre secretarias"><i class="fa-solid fa-right-left"></i></button>${t.rating_token?`<button onclick="navigator.clipboard.writeText('${url}');showToast('URL de valoración copiada')" class="text-yellow-500 mx-1"><i class="fa-solid fa-star"></i></button><a href="${wa}" target="_blank" class="text-green-600 mx-1"><i class="fa-brands fa-whatsapp"></i></a><a href="${mail}" class="text-blue-500 mx-1" title="Correo institucional"><i class="fa-solid fa-envelope"></i></a><a href="${mailPersonal}" class="text-indigo-500 mx-1 ${t.correo_personal?'':'hidden'}" title="Correo personal"><i class="fa-solid fa-at"></i></a><button type="button" onclick='openTeamsRating(${JSON.stringify(t.correo||'').replaceAll("'","&#39;")},${JSON.stringify(msg).replaceAll("'","&#39;")})' class="text-purple-600 mx-1 ${t.correo?'':'hidden'}" title="Teams: abrir chat con el mensaje de valoración"><i class="fa-brands fa-microsoft"></i></button>`:''}<button onclick="deleteSecTicket('${t.id}')" class="text-red-600 mx-1"><i class="fa-solid fa-trash"></i></button></td></tr>`}).join('')||'<tr><td colspan="8" class="p-8 text-center text-gray-400">No hay atenciones asignadas a esta secretaria.</td></tr>'; }
       const users=$('sec-users-list'); if(users){ users.innerHTML=secretariaUsersData.map(u=>`<div class="border rounded-xl p-3"><div class="flex justify-between gap-2"><div><b class="text-instVerdeOscuro">${esc(u.nombre)}</b><p class="text-xs text-gray-500">${esc(u.email||'')} · ${esc(u.rol)}</p></div><span class="text-xs px-2 py-1 rounded-full ${u.activo?'bg-green-100 text-green-700':'bg-gray-100 text-gray-500'}">${u.activo?'Activo':'Inactivo'}</span></div><div class="mt-2 flex gap-2"><button onclick='editSecUser(${JSON.stringify(u).replaceAll("'","&#39;")})' class="text-blue-600 text-sm font-bold">Editar</button><button onclick="toggleSecUser('${u.id}',${u.activo?false:true})" class="text-orange-600 text-sm font-bold">${u.activo?'Inactivar':'Activar'}</button><button onclick="copySecAccessLink('${u.id}')" class="text-green-600 text-sm font-bold">Acceso</button><button onclick="deleteSecUser('${u.id}')" class="text-red-600 text-sm font-bold">Eliminar</button></div></div>`).join('')||'<p class="text-gray-400">No hay secretarias registradas.</p>'; }
+      if(view==='transferencias') renderSecretariaTransfers();
       if(view==='directorio') renderSecDirectoryList();
     }
-    document.addEventListener('input', e=>{ if(e.target?.id==='sec-search-student') renderSecretariaModule(); if(e.target?.id==='sec-filter') renderSecretariaModule(); if(e.target?.id==='sec-dir-filter') renderSecDirectoryList(); if(['sec-dash-from','sec-dash-to','sec-dash-estado','sec-dash-categoria','sec-dash-secretaria','sec-dash-tipo'].includes(e.target?.id)) renderSecretariaModule(); if(['sec-report-from','sec-report-to','sec-report-estado','sec-report-categoria','sec-report-canal','sec-report-secretaria','sec-report-tipo'].includes(e.target?.id)) renderSecretariaReports(); });
+    document.addEventListener('input', e=>{ if(e.target?.id==='sec-search-student') renderSecretariaModule(); if(e.target?.id==='sec-filter') renderSecretariaModule(); if(e.target?.id==='sec-dir-filter') renderSecDirectoryList(); if(e.target?.id==='sec-transfer-filter') renderSecretariaTransfers(); if(['sec-dash-from','sec-dash-to','sec-dash-estado','sec-dash-categoria','sec-dash-secretaria','sec-dash-tipo'].includes(e.target?.id)) renderSecretariaModule(); if(['sec-report-from','sec-report-to','sec-report-estado','sec-report-categoria','sec-report-canal','sec-report-secretaria','sec-report-tipo'].includes(e.target?.id)) renderSecretariaReports(); });
     document.addEventListener('change', e=>{ if(e.target?.id==='sec-student') fillSecStudentManualFields(); if(e.target?.id==='sec-user-role') setSecUserPermsForm(secUserPermsFromForm(),e.target.value); if(['sec-report-from','sec-report-to','sec-report-estado','sec-report-categoria','sec-report-canal','sec-report-secretaria','sec-report-tipo'].includes(e.target?.id)) renderSecretariaReports(); });
     document.addEventListener('submit', async e=>{
-      if(e.target?.id==='sec-form-user'){ e.preventDefault(); if(!canManageSecretariaProfiles()) return showToast('Solo Admin Secretaría puede administrar perfiles de Secretaría.','error'); const id=$('sec-user-id').value; const payload={nombre:$('sec-user-name').value,email:$('sec-user-email').value,rol:$('sec-user-role').value,activo:$('sec-user-active').checked,permisos:secUserPermsFromForm()}; let res; if(id) res=await sbClient.from('secretaria_usuarios').update(payload).eq('id',id); else res=await sbClient.from('secretaria_usuarios').insert(payload); if(res.error) return showToast(res.error.message,'error'); await syncSecretariaAccessProfile(payload); await secAudit(id?'Editar perfil Secretaría':'Crear perfil Secretaría','secretaria_usuarios',id||null,null,payload); e.target.reset(); $('sec-user-id').value=''; await loadSecretariaData(); renderSecretariaModule(); showToast('Perfil de Secretaría guardado'); }
+      if(e.target?.id==='sec-form-user'){ e.preventDefault(); if(!canManageSecretariaProfiles()) return showToast('Solo Admin Secretaría puede administrar perfiles de Secretaría.','error'); const id=$('sec-user-id').value; const payload={nombre:$('sec-user-name').value,email:$('sec-user-email').value,rol:$('sec-user-role').value,activo:$('sec-user-active').checked,permisos:secUserPermsFromForm()}; let res; if(id) res=await sbClient.from('secretaria_usuarios').update(payload).eq('id',id).select().single(); else res=await sbClient.from('secretaria_usuarios').insert(payload).select().single(); if(res.error) return showToast(res.error.message,'error'); await syncSecretariaAccessProfile(payload,res.data?.id||id||null); await secAudit(id?'Editar perfil Secretaría':'Crear perfil Secretaría','secretaria_usuarios',res.data?.id||id||null,null,payload); e.target.reset(); $('sec-user-id').value=''; await loadSecretariaData(); renderSecretariaModule(); showToast('Perfil de Secretaría guardado y vinculado al acceso.'); }
       if(e.target?.id==='sec-dir-form'){ await saveSecDirectory(e); }
       if(e.target?.id==='sec-form-ticket'){ e.preventDefault(); const st=directorioData.find(u=>String(u.id)===$('sec-student').value); const lock=normalizeRole(currentProfile?.rol)==='secretaria'; const sec=lock?currentSecretariaProfile():secretariaUsersData.find(u=>String(u.id)===$('sec-secretaria').value); if(lock&&!sec)return showToast('Tu usuario no está vinculado a una secretaria activa. Solicita al administrador revisar el correo del perfil.','error'); const payload={codigo:secCodigo(),usuario_tipo:secretariaAllowedUserType(st?st.tipo:$('sec-user-type').value),estudiante_id:st?.id||null,cedula:st?.cedula||$('sec-cedula').value,nombre:st?.nombres||$('sec-nombre').value,correo:st?.correo||$('sec-correo').value||'',correo_personal:st?.correo_personal||$('sec-correo-personal')?.value||'',celular:st?.celular||$('sec-celular')?.value||'',whatsapp:st?.whatsapp||st?.celular||$('sec-whatsapp').value||$('sec-celular')?.value||'',canal:$('sec-canal').value,asunto:$('sec-asunto').value,categoria:$('sec-categoria').value,descripcion:$('sec-descripcion').value,estado:'Abierto',secretaria_id:sec?.id||null,secretaria_nombre:sec?.nombre||'',rating_token:randomToken(),created_by:currentProfile?.id||null}; if(!payload.nombre||!payload.asunto) return showToast('Complete usuario y requerimiento','error'); const {data,error}=await sbClient.from('secretaria_tickets').insert(payload).select().single(); if(error) return showToast(error.message,'error'); await sbClient.from('secretaria_historial').insert({ticket_id:data.id,accion:'Creación',estado_nuevo:'Abierto',secretaria_destino:payload.secretaria_nombre,comentario:'Atención registrada',created_by:currentProfile?.nombre_completo||currentUser?.email}); await secAudit('Crear atención','secretaria_tickets',data.id,null,payload); e.target.reset(); await loadSecretariaData(); renderSecretariaModule(); showToast(`${payload.codigo} asignado a ${payload.secretaria_nombre||'sin asignar'}`); }
     });
-    async function openTeamsRating(email,message){
+    function openTeamsRating(email,message){
       if(!email) return showToast('El usuario no tiene correo institucional','error');
-      try{ await navigator.clipboard.writeText(message); }catch(e){ console.warn('No se pudo copiar el mensaje de Teams',e); }
-      window.open('https://teams.microsoft.com/l/chat/0/0?users='+encodeURIComponent(email),'_blank','noopener');
-      showToast('Se abrió el chat de Teams y se copió un solo mensaje. Pégalo y envíalo una vez.');
+      const teamsUrl='https://teams.microsoft.com/l/chat/0/0?users='+encodeURIComponent(email)+'&message='+encodeURIComponent(message);
+      const teamsWindow=window.open(teamsUrl,'_blank','noopener');
+      if(!teamsWindow) return showToast('El navegador bloqueó la ventana de Teams. Habilita las ventanas emergentes e inténtalo nuevamente.','error');
+      showToast('Teams se abrió con un único mensaje de valoración listo para enviar.');
     }
     window.openTeamsRating=openTeamsRating;
     async function secAudit(accion,modulo,registro,antes,despues){ try{ await sbClient.from('secretaria_auditoria').insert({usuario_id:currentProfile?.id||null,usuario_nombre:currentProfile?.nombre_completo||currentUser?.email||'',accion,modulo,registro_id:registro,datos_antes:antes,datos_despues:despues}); }catch(e){ console.warn('Auditoría Secretaría no disponible', e); } }
@@ -2804,13 +2857,22 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       }
       if(nuevo === 'Cancelado') payload.rating_token = null;
       payload.last_status_change_at = nowIso;
-      const {error}=await sbClient.from('secretaria_tickets').update(payload).eq('id',id);
-      if(error)return showToast(error.message,'error');
       let itCreated=null;
-      if(transferIT && !old.transferido_it) itCreated=await crearTicketITDesdeSecretaria(old,payload,comentario);
-      const accion=transferIT?'Transferencia a IT':internalTransfer?'Transferencia entre secretarias':nuevo==='Resuelto'?'Resolución':nuevo==='Cancelado'?'Cancelación':'Actualización';
-      const historialComentario=(comentario||'')+(itCreated?` | Ticket IT generado: ${itCreated.id_str}`:'');
-      await sbClient.from('secretaria_historial').insert({ticket_id:id,accion,estado_anterior:old.estado,estado_nuevo:payload.estado,secretaria_origen:old.secretaria_nombre||'Sin asignar',secretaria_destino:payload.secretaria_nombre||'Sin asignar',comentario:historialComentario||accion,created_by:currentProfile?.nombre_completo||currentUser?.email});
+      let accion=transferIT?'Transferencia a IT':internalTransfer?'Transferencia entre secretarias':nuevo==='Resuelto'?'Resolución':nuevo==='Cancelado'?'Cancelación':'Actualización';
+      if(internalTransfer){
+        const {error:rpcError}=await sbClient.rpc('transferir_ticket_secretaria',{p_ticket_id:id,p_secretaria_destino_id:finalSec.id,p_comentario:comentario});
+        if(rpcError) return showToast('No se realizó la transferencia: '+rpcError.message+'. Ejecuta SQL_FIX_TRANSFERENCIAS_SECRETARIA_PRODUCCION.sql.','error');
+        const destinationAgent=agentsData.find(a=>String(a.auth_user_id||'')===String(finalSec.auth_user_id||'')) || agentsData.find(a=>normalizeEmail(a.email||'')===normalizeEmail(finalSec.email||''));
+        if(destinationAgent?.id){
+          try{ await sbClient.from('notificaciones').insert({agent_id:destinationAgent.id,ticket_id:null,tipo:'secretaria_transferencia',titulo:`Transferencia recibida: ${old.codigo||''}`,mensaje:`${old.secretaria_nombre||'Secretaría'} transfirió el ticket ${old.codigo||''}. Motivo: ${comentario}`,data:{secretaria_ticket_id:id,codigo:old.codigo,origen:old.secretaria_nombre,destino:finalSec.nombre},created_by:currentProfile?.id||null,created_by_nombre:currentProfile?.nombre_completo||currentUser?.email||''}); }catch(e){ console.warn('No se pudo notificar la transferencia',e); }
+        }
+      }else{
+        const {error}=await sbClient.from('secretaria_tickets').update(payload).eq('id',id);
+        if(error)return showToast(error.message,'error');
+        if(transferIT && !old.transferido_it) itCreated=await crearTicketITDesdeSecretaria(old,payload,comentario);
+        const historialComentario=(comentario||'')+(itCreated?` | Ticket IT generado: ${itCreated.id_str}`:'');
+        await sbClient.from('secretaria_historial').insert({ticket_id:id,accion,estado_anterior:old.estado,estado_nuevo:payload.estado,secretaria_origen:old.secretaria_nombre||'Sin asignar',secretaria_destino:payload.secretaria_nombre||'Sin asignar',comentario:historialComentario||accion,created_by:currentProfile?.nombre_completo||currentUser?.email});
+      }
       await secAudit(accion,'secretaria_tickets',id,old,{...payload,it_ticket_id:itCreated?.id||old.it_ticket_id||null},currentProfile);
       closeSecEditModal();
       await loadSecretariaData();
