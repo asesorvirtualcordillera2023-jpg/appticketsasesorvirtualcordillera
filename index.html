@@ -299,6 +299,7 @@
         <button onclick="switchTab('tab-sec-registros')" id="btn-tab-sec-registros" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-list-check w-5 text-center"></i> Tickets Secretaría</button>
         <button onclick="switchTab('tab-sec-directorio')" id="btn-tab-sec-directorio" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-address-book w-5 text-center"></i> Directorio Secretaría</button>
         <button onclick="switchTab('tab-sec-dashboard')" id="btn-tab-sec-dashboard" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-chart-pie w-5 text-center"></i> Dashboard Secretaría</button>
+        <button onclick="switchTab('tab-sec-reportes')" id="btn-tab-sec-reportes" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-file-export w-5 text-center"></i> Reportes Secretaría</button>
         <button onclick="switchTab('tab-notificaciones')" id="btn-tab-notificaciones" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-bell w-5 text-center"></i> Notificaciones <span id="notif-count-nav" class="notification-dot hidden ml-auto">0</span></button>
         <button onclick="switchTab('tab-auditoria')" id="btn-tab-auditoria" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-shield-halved w-5 text-center"></i> Auditoría</button>
         <button onclick="switchTab('tab-config')" id="btn-tab-config" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-gear w-5 text-center"></i> Configuración</button>
@@ -542,7 +543,51 @@
               <div class="xl:col-span-2 overflow-x-auto"><table class="w-full text-left text-sm"><thead class="bg-gray-50"><tr><th class="px-4 py-3">Usuario</th><th class="px-4 py-3">Contacto</th><th class="px-4 py-3">Tipo</th><th class="px-4 py-3 text-center">Acción</th></tr></thead><tbody id="sec-dir-results"></tbody></table></div>
             </div>
           </div>
-          <div id="sec-users-admin-panel" class="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-6"><div class="bg-white rounded-2xl border p-6"><h3 class="font-semibold text-instVerdeOscuro mb-4"><i class="fa-solid fa-user-plus mr-2"></i>Secretarias / Supervisora</h3><form id="sec-form-user" class="space-y-3"><input id="sec-user-id" type="hidden"><input id="sec-user-name" class="field" placeholder="Nombre" required><input id="sec-user-email" class="field" placeholder="Correo"><select id="sec-user-role" class="field"><option value="secretaria">Secretaria</option><option value="supervisora">Supervisora</option><option value="admin">Admin Secretaría</option></select><div class="border rounded-xl p-3 bg-gray-50"><p class="text-xs font-bold text-instVerdeOscuro mb-2">Módulos activos</p><label class="flex items-center gap-2 text-sm"><input id="sec-perm-notificaciones" type="checkbox" checked> Notificaciones</label><label class="flex items-center gap-2 text-sm"><input id="sec-perm-secretaria" type="checkbox" checked> Atención Secretaría</label><label class="flex items-center gap-2 text-sm"><input id="sec-perm-reportes" type="checkbox"> Reportes de Secretaría</label></div><label class="flex items-center gap-2 text-sm"><input id="sec-user-active" type="checkbox" checked> Activo</label><button class="btn btn-primary w-full py-2">Guardar perfil</button></form></div><div class="xl:col-span-2 bg-white rounded-2xl border overflow-hidden"><div class="p-4 bg-gray-50 border-b"><h3 class="font-semibold">Personal de Secretaría</h3></div><div id="sec-users-list" class="p-4 grid md:grid-cols-2 gap-3"></div></div></div>
+          <div id="sec-users-admin-panel" class="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-6"><div class="bg-white rounded-2xl border p-6"><h3 class="font-semibold text-instVerdeOscuro mb-4"><i class="fa-solid fa-user-plus mr-2"></i>Secretarias / Supervisora</h3><form id="sec-form-user" class="space-y-3"><input id="sec-user-id" type="hidden"><input id="sec-user-name" class="field" placeholder="Nombre" required><input id="sec-user-email" class="field" placeholder="Correo"><select id="sec-user-role" class="field"><option value="secretaria">Secretaria</option><option value="supervisora">Supervisora</option><option value="admin">Admin Secretaría</option></select><div class="border rounded-xl p-3 bg-gray-50"><p class="text-xs font-bold text-instVerdeOscuro mb-2">Módulos activos</p><label class="flex items-center gap-2 text-sm"><input id="sec-perm-notificaciones" type="checkbox" checked> Notificaciones</label><label class="flex items-center gap-2 text-sm"><input id="sec-perm-secretaria" type="checkbox" checked> Atención Secretaría</label><label class="flex items-center gap-2 text-sm"><input id="sec-perm-reportes" type="checkbox" checked> Reportes de Secretaría</label></div><label class="flex items-center gap-2 text-sm"><input id="sec-user-active" type="checkbox" checked> Activo</label><button class="btn btn-primary w-full py-2">Guardar perfil</button></form></div><div class="xl:col-span-2 bg-white rounded-2xl border overflow-hidden"><div class="p-4 bg-gray-50 border-b"><h3 class="font-semibold">Personal de Secretaría</h3></div><div id="sec-users-list" class="p-4 grid md:grid-cols-2 gap-3"></div></div></div>
+        </section>
+
+        <section id="tab-sec-reportes" class="tab-content max-w-7xl mx-auto">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+            <div class="flex items-center gap-3"><div class="module-logo-wrap"><i class="fa-solid fa-file-export text-white text-xl"></i></div><div><h2 class="text-2xl font-bold text-instVerdeOscuro">Reportes de Secretaría</h2><p class="text-sm text-instPlomo">Reporte independiente de Atención Secretaría. Cada secretaria visualiza únicamente sus atenciones; supervisión y administración pueden consultar el consolidado.</p></div></div>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="exportSecretariaReporteCSV()" class="btn btn-green px-4 py-2"><i class="fa-solid fa-file-csv"></i> CSV</button>
+              <button onclick="exportSecretariaReporteExcel()" class="btn btn-green px-4 py-2"><i class="fa-solid fa-file-excel"></i> Excel</button>
+              <button onclick="exportSecretariaReporteHTML()" class="btn btn-primary px-4 py-2"><i class="fa-solid fa-file-code"></i> HTML</button>
+              <button onclick="exportSecretariaReporteWord()" class="btn btn-primary px-4 py-2"><i class="fa-solid fa-file-word"></i> Word</button>
+            </div>
+          </div>
+          <div id="sec-report-scope-label" class="bg-green-50 border border-green-200 text-green-800 rounded-2xl p-4 mb-5 text-sm"></div>
+          <div class="bg-white rounded-2xl border shadow-sm p-4 mb-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
+              <input id="sec-report-from" type="date" class="field py-2" title="Fecha desde">
+              <input id="sec-report-to" type="date" class="field py-2" title="Fecha hasta">
+              <select id="sec-report-estado" class="field py-2"><option value="">Todos los estados</option><option>Abierto</option><option>En Proceso</option><option>Pendiente Usuario</option><option>Resuelto</option><option>Cancelado</option><option>Transferido a IT</option></select>
+              <select id="sec-report-categoria" class="field py-2"><option value="">Todas las categorías</option></select>
+              <select id="sec-report-canal" class="field py-2"><option value="">Todos los canales</option></select>
+              <select id="sec-report-secretaria" class="field py-2"><option value="">Todas las secretarias</option></select>
+              <select id="sec-report-tipo" class="field py-2"><option value="">Todos los tipos</option><option>Estudiante</option><option>Docente</option><option>Administrativo</option><option>Externo</option></select>
+            </div>
+            <div class="flex justify-end mt-3"><button onclick="resetSecretariaReportFilters()" class="btn btn-muted px-4 py-2"><i class="fa-solid fa-broom"></i> Limpiar filtros</button></div>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4 mb-6">
+            <div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Total</p><b id="sec-report-kpi-total" class="text-2xl text-instVerdeOscuro">0</b></div>
+            <div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Abiertos</p><b id="sec-report-kpi-abiertos" class="text-2xl text-instTomate">0</b></div>
+            <div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Resueltos</p><b id="sec-report-kpi-resueltos" class="text-2xl text-instVerdeClaro">0</b></div>
+            <div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Cancelados</p><b id="sec-report-kpi-cancelados" class="text-2xl text-gray-600">0</b></div>
+            <div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Transferidos IT</p><b id="sec-report-kpi-transferidos" class="text-2xl text-blue-600">0</b></div>
+            <div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Valoración</p><b id="sec-report-kpi-rating" class="text-2xl text-yellow-500">0.0</b></div>
+            <div class="bg-white rounded-2xl border p-4"><p class="text-xs text-gray-500 uppercase font-bold">Tiempo promedio</p><b id="sec-report-kpi-tiempo" class="text-lg text-instVerdeOscuro">-</b></div>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white border rounded-2xl p-3 h-64"><canvas id="secReportChartEstado"></canvas></div>
+            <div class="bg-white border rounded-2xl p-3 h-64"><canvas id="secReportChartCategoria"></canvas></div>
+            <div class="bg-white border rounded-2xl p-3 h-64"><canvas id="secReportChartCanal"></canvas></div>
+            <div class="bg-white border rounded-2xl p-3 h-64"><canvas id="secReportChartSecretaria"></canvas></div>
+          </div>
+          <div class="bg-white rounded-2xl border shadow-sm overflow-hidden">
+            <div class="p-4 border-b bg-gray-50 flex justify-between items-center"><div><h3 class="font-semibold text-instVerdeOscuro">Detalle del reporte</h3><p class="text-xs text-gray-500">La tabla y las exportaciones respetan los filtros seleccionados.</p></div><span id="sec-report-count" class="text-xs bg-instVerdeClaro text-white px-3 py-1 rounded-full">0 registros</span></div>
+            <div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="bg-gray-50"><tr><th class="px-4 py-3">Ticket</th><th class="px-4 py-3">Fecha</th><th class="px-4 py-3">Usuario</th><th class="px-4 py-3">Requerimiento</th><th class="px-4 py-3">Categoría / canal</th><th class="px-4 py-3">Secretaria</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3">Tiempo</th><th class="px-4 py-3">Valoración</th></tr></thead><tbody id="sec-report-body"></tbody></table></div>
+          </div>
         </section>
 
         <section id="tab-auditoria" class="tab-content max-w-7xl mx-auto">
@@ -719,7 +764,7 @@
     function normalizePeriodos(){ const raw=configData?.periodos||[]; return raw.map((p,i)=> typeof p==='string' ? {nombre:p, activo:p===configData?.periodo_activo, habilitado:true} : {nombre:p.nombre||p.label||'', activo:!!p.activo, habilitado:p.habilitado!==false}).filter(p=>p.nombre); }
     function commitPeriodos(list){ configData.periodos=list; const active=list.find(p=>p.activo&&p.habilitado!==false)||list.find(p=>p.habilitado!==false)||list[0]; configData.periodo_activo=active?active.nombre:''; }
     function currentAcademicPeriod(){ const list=normalizePeriodos(); const active=list.find(p=>p.activo&&p.habilitado!==false); return active?.nombre || list.find(p=>p.habilitado!==false)?.nombre || configData?.periodo_activo || ''; }
-    let currentUser = null, currentProfile = null, ticketsData = [], directorioData = [], agentsData = [], notificationsData = [], invitationsData = [], secretariaTicketsData = [], secretariaUsersData = [], secretariaAuditData = [], configData = defaultConfig;
+    let currentUser = null, currentProfile = null, ticketsData = [], directorioData = [], agentsData = [], notificationsData = [], invitationsData = [], secretariaTicketsData = [], secretariaReportData = [], secretariaUsersData = [], secretariaAuditData = [], configData = defaultConfig;
     let activeSecView = 'registros';
     let charts = {};
     const $ = id => document.getElementById(id);
@@ -810,6 +855,7 @@
       {key:'agentes', tab:'tab-agentes', label:'Agentes', defaultBasic:false},
       {key:'periodos', tab:'tab-periodos', label:'Periodos Académicos', defaultBasic:false},
       {key:'secretaria', tab:'tab-secretaria', label:'Atención Secretaría', defaultBasic:false},
+      {key:'reportes_secretaria', tab:'tab-sec-reportes', label:'Reportes Secretaría', defaultBasic:false},
       {key:'auditoria', tab:'tab-auditoria', label:'Auditoría', defaultBasic:false},
       {key:'config', tab:'tab-config', label:'Configuración', defaultBasic:false}
     ];
@@ -817,26 +863,27 @@
       agent: {notificaciones:true, form:true, registros:true, dashboard:false, reportes:false, informe:false, directorio:true, agentes:false, periodos:false, config:false},
       advanced: {notificaciones:true, form:true, registros:true, dashboard:true, reportes:true, informe:false, directorio:true, agentes:false, periodos:false, config:false},
       coordinator: {notificaciones:true, form:true, registros:true, dashboard:true, reportes:true, informe:true, directorio:true, agentes:false, periodos:false, config:false},
-      admin: {notificaciones:true, form:true, registros:true, dashboard:true, reportes:true, informe:true, directorio:true, agentes:true, periodos:true, secretaria:true, auditoria:true, config:true},
-      secretaria: {notificaciones:true, form:false, registros:false, dashboard:false, reportes:false, informe:false, directorio:false, agentes:false, periodos:false, secretaria:true, auditoria:false, config:false},
-      supervisora_secretaria: {notificaciones:true, form:false, registros:false, dashboard:false, reportes:true, informe:false, directorio:false, agentes:false, periodos:false, secretaria:true, auditoria:false, config:false},
-      admin_secretaria: {notificaciones:true, form:false, registros:false, dashboard:false, reportes:true, informe:false, directorio:false, agentes:false, periodos:false, secretaria:true, auditoria:false, config:false}
+      admin: {notificaciones:true, form:true, registros:true, dashboard:true, reportes:true, informe:true, directorio:true, agentes:true, periodos:true, secretaria:true, reportes_secretaria:true, auditoria:true, config:true},
+      secretaria: {notificaciones:true, form:false, registros:false, dashboard:false, reportes:false, informe:false, directorio:false, agentes:false, periodos:false, secretaria:true, reportes_secretaria:true, auditoria:false, config:false},
+      supervisora_secretaria: {notificaciones:true, form:false, registros:false, dashboard:false, reportes:false, informe:false, directorio:false, agentes:false, periodos:false, secretaria:true, reportes_secretaria:true, auditoria:false, config:false},
+      admin_secretaria: {notificaciones:true, form:false, registros:false, dashboard:false, reportes:false, informe:false, directorio:false, agentes:false, periodos:false, secretaria:true, reportes_secretaria:true, auditoria:false, config:false}
     };
     const roleLabels = {admin:'Administrador', coordinator:'Coordinador', advanced:'Agente soporte avanzado', agent:'Agente básico', secretaria:'Secretaria', supervisora_secretaria:'Supervisora Secretaría', admin_secretaria:'Admin Secretaría'};
     function permissionsFromRole(role){ return {...(ROLE_PRESETS[role] || ROLE_PRESETS.agent)}; }
     function normalizeRole(role){ return ['admin','coordinator','advanced','agent','secretaria','supervisora_secretaria','admin_secretaria'].includes(role) ? role : 'agent'; }
-    function normalizePermissions(role, perms){ return {...permissionsFromRole(normalizeRole(role)), ...(perms && typeof perms === 'object' ? perms : {})}; }
+    function normalizePermissions(role, perms){ const r=normalizeRole(role); const custom=(perms && typeof perms==='object')?perms:{}; const out={...permissionsFromRole(r),...custom}; if(['secretaria','supervisora_secretaria','admin_secretaria'].includes(r)){ out.reportes=false; if(!Object.prototype.hasOwnProperty.call(custom,'reportes_secretaria')) out.reportes_secretaria=true; } return out; }
     function userPermissions(){ return normalizePermissions(currentProfile?.rol, currentProfile?.permisos); }
     function hasModuleAccess(tabId){
       if(isAdmin()) return true;
       if(['tab-secretaria','tab-sec-nueva','tab-sec-registros','tab-sec-directorio'].includes(tabId)) return !!userPermissions().secretaria;
       if(tabId==='tab-sec-dashboard') return !!userPermissions().secretaria && canViewSecretariaDashboard();
+      if(tabId==='tab-sec-reportes') return !!userPermissions().reportes_secretaria;
       const mod = MODULE_PERMISSIONS.find(m => m.tab === tabId || ('tab-'+m.key) === tabId);
       if(!mod) return true;
       return !!userPermissions()[mod.key];
     }
     function firstAllowedTab(){
-      const order = ['tab-notificaciones','tab-form','tab-registros','tab-dashboard','tab-reportes','tab-informe','tab-directorio','tab-agentes','tab-periodos','tab-sec-registros','tab-sec-nueva','tab-sec-directorio','tab-sec-dashboard','tab-auditoria','tab-config'];
+      const order = ['tab-notificaciones','tab-form','tab-registros','tab-dashboard','tab-reportes','tab-informe','tab-directorio','tab-agentes','tab-periodos','tab-sec-registros','tab-sec-nueva','tab-sec-directorio','tab-sec-dashboard','tab-sec-reportes','tab-auditoria','tab-config'];
       return order.find(hasModuleAccess) || 'tab-form';
     }
     function permissionsSummary(perms, role){
@@ -981,8 +1028,9 @@
       await safeLoad('Agentes', loadAgents);
       await safeLoad('Notificaciones', loadNotifications);
       await safeLoad('Atención Secretaría', loadSecretariaData);
+      if(hasModuleAccess('tab-sec-reportes')) await safeLoad('Reportes Secretaría', loadSecretariaReportData);
       if(isAdmin()) await safeLoad('Invitaciones', loadInvitations);
-      try { actualizarSelectsConfig(); renderDirectorio(); renderTickets(); renderAgents(); renderNotifications(); renderInvitations(); updateNotificationBadge(); populateDashboardFilters(); renderDashboard(); populateInformeFilters(); renderInformePreview(); }
+      try { actualizarSelectsConfig(); renderDirectorio(); renderTickets(); renderAgents(); renderNotifications(); renderInvitations(); updateNotificationBadge(); populateDashboardFilters(); renderDashboard(); populateInformeFilters(); renderInformePreview(); renderSecretariaReports(); }
       catch(e){ console.error('Render inicial', e); showToast(`Vista inicial: ${e.message}`,'error'); }
       subscribeRealtime();
     }
@@ -991,7 +1039,7 @@
       try{
         sbClient.channel('public-changes')
           .on('postgres_changes',{event:'*',schema:'public',table:'tickets'},()=>loadTickets().then(()=>{renderTickets();populateDashboardFilters();renderDashboard();populateInformeFilters();renderInformePreview();}).catch(console.error))
-          .on('postgres_changes',{event:'*',schema:'public',table:'directorio'},()=>loadDirectory().then(()=>renderDirectorio()).catch(console.error))
+          .on('postgres_changes',{event:'*',schema:'public',table:'directorio'},()=>loadDirectory().then(()=>{renderDirectorio(); if(typeof renderSecretariaModule==='function') renderSecretariaModule();}).catch(console.error))
           .on('postgres_changes',{event:'*',schema:'public',table:'app_config'},()=>loadConfig().then(()=>{actualizarSelectsConfig();populateDashboardFilters();populateInformeFilters();}).catch(console.error))
           .on('postgres_changes',{event:'*',schema:'public',table:'agentes'},()=>loadAgents().then(()=>renderAgents()).catch(console.error))
           .on('postgres_changes',{event:'*',schema:'public',table:'notificaciones'},()=>loadNotifications().then(()=>{renderNotifications();updateNotificationBadge();}).catch(console.error))
@@ -1097,7 +1145,8 @@
       if(effectiveTabId==='tab-informe'){populateInformeFilters();renderInformePreview()}
       if(effectiveTabId==='tab-notificaciones'){loadNotifications().then(renderNotifications)}
       if(effectiveTabId==='tab-agentes'&&isAdmin()){loadInvitations().then(renderInvitations)}
-      if(effectiveTabId==='tab-reportes'){loadSecretariaData().then(()=>{renderReportesModule&&renderReportesModule()})}
+      if(effectiveTabId==='tab-reportes'){renderReportesModule&&renderReportesModule()}
+      if(effectiveTabId==='tab-sec-reportes'){loadSecretariaReportData().then(renderSecretariaReports)}
       if(effectiveTabId==='tab-secretaria'){loadSecretariaData().then(renderSecretariaModule)}
       if(effectiveTabId==='tab-auditoria'){loadAuditoriaGeneral().then(renderAuditoriaGeneral)}
       applyRoleAccess();
@@ -1341,7 +1390,7 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
     async function abrirModalLink(id){ const t=ticketsData.find(x=>x.id===id); if(!t)return; let token=t.rating_token; if(!token){ token=randomToken(); const {error}=await sbClient.from('tickets').update({rating_token:token}).eq('id',id); if(error)return showToast(error.message,'error'); t.rating_token=token; } const base=window.location.href.split('#')[0].split('?')[0]; const link=`${base}#rate_ticket=${encodeURIComponent(id)}&token=${encodeURIComponent(token)}`; $('url-valoracion').value=link; const box=$('modal-link-valoracion').querySelector('.bg-white'); let extra=$('rating-contact-actions'); if(!extra){ extra=document.createElement('div'); extra.id='rating-contact-actions'; const ref=$('url-valoracion').closest('.flex'); ref.insertAdjacentElement('afterend',extra); } extra.innerHTML=contactLinksHTML(link,userContactForTicket(t),t); $('btn-test-valoracion').onclick=()=>{window.open(link,'_blank')}; $('modal-link-valoracion').classList.add('flex'); }
     window.abrirModalLink=abrirModalLink; window.cerrarModalLink=()=>$('modal-link-valoracion').classList.remove('flex'); window.copiarUrlValoracion=async()=>{const val=$('url-valoracion').value; try{await navigator.clipboard.writeText(val)}catch(e){$('url-valoracion').select();document.execCommand('copy')} showToast('Enlace copiado')};
 
-    $('form-directorio').onsubmit=async e=>{e.preventDefault(); const u={cedula:$('dir-cedula').value,nombres:$('dir-nombres').value,correo:$('dir-correo').value,correo_personal:$('dir-correo-personal')?.value||'',celular:$('dir-celular')?.value||'',whatsapp:$('dir-whatsapp')?.value||'',carrera:$('dir-carrera').value,nivel:$('dir-nivel').value,tipo:$('dir-tipo').value,periodo:$('dir-periodo').value||currentAcademicPeriod()}; const {error}=await sbClient.from('directorio').insert(u); if(error)return showToast(error.message,'error'); e.target.reset(); showToast('Usuario guardado'); await loadDirectory(); renderDirectorio(); };
+    $('form-directorio').onsubmit=async e=>{e.preventDefault(); const u={cedula:$('dir-cedula').value,nombres:$('dir-nombres').value,correo:$('dir-correo').value,correo_personal:$('dir-correo-personal')?.value||'',celular:$('dir-celular')?.value||'',whatsapp:$('dir-whatsapp')?.value||'',carrera:$('dir-carrera').value,nivel:$('dir-nivel').value,tipo:$('dir-tipo').value,periodo:$('dir-periodo').value||currentAcademicPeriod()}; const {error}=await sbClient.from('directorio').insert(u); if(error)return showToast(error.message,'error'); e.target.reset(); showToast('Usuario guardado'); await loadDirectory(); renderDirectorio(); if(typeof renderSecretariaModule==='function') renderSecretariaModule(); };
     function renderDirectorio(){
       const filterInput = $('filter-directorio');
       const term = (filterInput?.value || '').toLowerCase().trim();
@@ -1351,7 +1400,7 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       $('directorio-table-body').innerHTML = rows.map(u=>`<tr class="hover:bg-gray-50 border-b"><td class="px-4 py-3 font-medium">${esc(u.cedula)}</td><td class="px-4 py-3"><div class="font-medium">${esc(u.nombres)}</div><div class="text-xs text-gray-500">Inst: ${esc(u.correo||'-')}</div><div class="text-xs text-gray-500">Personal: ${esc(u.correo_personal||'-')} · Cel: ${esc(u.celular||u.whatsapp||'-')}</div></td><td class="px-4 py-3 text-xs"><span class="bg-purple-100 text-purple-700 px-2 py-1 rounded">${esc(u.tipo)}</span></td><td class="px-4 py-3 text-xs text-gray-600">${esc(u.periodo||'-')}</td><td class="px-4 py-3"><div class="flex items-center gap-2"><button onclick="abrirModalEditarUsuarioDirectorio('${u.id}')" class="text-blue-600 hover:bg-blue-50 p-2 rounded" title="Modificar registro"><i class="fa-solid fa-pen-to-square"></i></button><button onclick="eliminarUsuario('${u.id}')" class="text-red-500 hover:bg-red-50 p-2 rounded" title="Eliminar registro"><i class="fa-solid fa-trash"></i></button></div></td></tr>`).join('');
       if(!rows.length) $('directorio-table-body').innerHTML = '<tr><td colspan="5" class="text-center py-8 text-sm text-gray-500 bg-gray-50">No hay usuarios para mostrar con el filtro actual.</td></tr>';
     }
-    async function eliminarUsuario(id){ if(!confirm('¿Eliminar usuario del directorio?'))return; const {error}=await sbClient.from('directorio').delete().eq('id',id); if(error)return showToast(error.message,'error'); showToast('Usuario eliminado'); await loadDirectory(); renderDirectorio(); }
+    async function eliminarUsuario(id){ if(!confirm('¿Eliminar usuario del directorio?'))return; const {error}=await sbClient.from('directorio').delete().eq('id',id); if(error)return showToast(error.message,'error'); showToast('Usuario eliminado'); await loadDirectory(); renderDirectorio(); if(typeof renderSecretariaModule==='function') renderSecretariaModule(); }
     window.eliminarUsuario=eliminarUsuario;
     function abrirModalEditarUsuarioDirectorio(id){
       const u = directorioData.find(x => String(x.id) === String(id));
@@ -1395,6 +1444,7 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       cerrarModalEditarUsuarioDirectorio();
       await loadDirectory();
       renderDirectorio();
+      if(typeof renderSecretariaModule==='function') renderSecretariaModule();
     };
     window.abrirModalEditarUsuarioDirectorio = abrirModalEditarUsuarioDirectorio;
     window.cerrarModalEditarUsuarioDirectorio = cerrarModalEditarUsuarioDirectorio;
@@ -1705,7 +1755,7 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       }
       $('file-name-display').textContent='Carga finalizada';
       showToast(`Nuevos: ${insertados}. Actualizados vacíos: ${actualizados}. Sin cambios: ${omitidosSinCambios}. Duplicados CSV: ${duplicadosCsv}. Separador: ${rows.delimiter}`);
-      await loadDirectory(); renderDirectorio(); event.target.value='';
+      await loadDirectory(); renderDirectorio(); if(typeof renderSecretariaModule==='function') renderSecretariaModule(); event.target.value='';
     }
     window.handleCSVUpload=handleCSVUpload;
     async function handleTicketsCSVUpload(event){ const f=event.target.files[0]; if(!f)return; const rows=await readTabularFile(f); if(rows.length<2){showToast('Archivo vacío','error');return} const header=rows[0]; const idx=(n)=>headerIndex(header,[n],-1); const payload=[]; for(let i=1;i<rows.length;i++){const r=rows[i]; if(!r.length||!norm(r[idx('ID')]||r[0]))continue; const estado=norm(r[idx('Estado')])||'Requiere Seguimiento'; payload.push({id_str:norm(r[idx('ID')])||('TKT-'+String(Date.now()+i)),fecha_texto:norm(r[idx('Fecha')]),agente_nombre:norm(r[idx('Agente')])||currentProfile?.nombre_completo,usuario_cedula:norm(r[idx('Cedula_Usuario')]),usuario_nombre:norm(r[idx('Nombre_Usuario')]),asunto:norm(r[idx('Asunto')]),categoria:norm(r[idx('Categoria')]),subcategoria:norm(r[idx('Subcategoria')]),prioridad:norm(r[idx('Prioridad')])||'Media',canal:norm(r[idx('Canal')]),estado,valoracion_calificacion:Number(norm(r[idx('Valoracion_Estrellas')]))||null,valoracion_comentario:norm(r[idx('Comentario_Valoracion')]),rating_token:estado==='Resuelto'?randomToken():null}); }
@@ -2176,7 +2226,7 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       if(formato==='docx'){ if(window.htmlDocx&&window.htmlDocx.asBlob){ const blob=window.htmlDocx.asBlob(html); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fname+'.docx'; a.click(); URL.revokeObjectURL(a.href); return showToast('Reporte Word del Dashboard generado'); } download(fname+'.doc',html,'application/msword'); return showToast('No cargó DOCX; se descargó Word HTML'); }
       if(formato==='xls'){ const d=ticketsExportRows(); downloadXLS(fname+'.xls','Reporte Dashboard IT',d.headers,d.rows); return showToast('Reporte XLS del Dashboard generado'); }
     }
-    window.exportarDashboardReporte=exportarDashboardReporte; window.exportSecretariaReporteHTML=exportSecretariaReporteHTML; window.exportSecretariaReporteWord=exportSecretariaReporteWord;
+    window.exportarDashboardReporte=exportarDashboardReporte;
 
 
 
@@ -2199,16 +2249,22 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       const hasOctMar = /oct|octubre/.test(sp) && /mar|marzo/.test(sp) && /oct|octubre/.test(ap) && /mar|marzo/.test(ap);
       return hasAbrSep || hasOctMar;
     }
-    function isDirectorioAtendible(u){ const tipo=normalizeUserType(u?.tipo); return ['Estudiante','Docente','Administrativo'].includes(tipo); }
+    function isDirectorioAtendible(u){
+      return !!u && (String(u.nombres||'').trim()!=='' || String(u.cedula||'').trim()!=='');
+    }
     function secStudentOptions(term=''){
       const periodo=currentAcademicPeriod();
       const q=normalizeTextForSearch(term);
-      const base=directorioData.filter(isDirectorioAtendible);
-      const estudiantesPeriodo=base.filter(u=>normalizeUserType(u.tipo)==='Estudiante' && periodLooksLikeActive(u.periodo, periodo));
-      const otros=base.filter(u=>normalizeUserType(u.tipo)!=='Estudiante');
-      const periodRows=(estudiantesPeriodo.length?estudiantesPeriodo:base.filter(u=>normalizeUserType(u.tipo)==='Estudiante')).concat(otros);
-      const rows=periodRows.filter(u=>!q || [u.cedula,u.nombres,u.tipo,u.correo,u.correo_personal,u.celular,u.whatsapp,u.carrera,u.nivel,u.periodo].some(v=>normalizeTextForSearch(v).includes(q)));
-      return rows.slice(0,160);
+      const rows=directorioData
+        .filter(isDirectorioAtendible)
+        .filter(u=>!q || [u.cedula,u.nombres,u.tipo,u.correo,u.correo_personal,u.celular,u.whatsapp,u.carrera,u.nivel,u.periodo].some(v=>normalizeTextForSearch(v).includes(q)))
+        .sort((a,b)=>{
+          const aActual=normalizeUserType(a.tipo)==='Estudiante' && periodLooksLikeActive(a.periodo,periodo) ? 0 : 1;
+          const bActual=normalizeUserType(b.tipo)==='Estudiante' && periodLooksLikeActive(b.periodo,periodo) ? 0 : 1;
+          if(aActual!==bActual) return aActual-bActual;
+          return String(a.nombres||'').localeCompare(String(b.nombres||''),'es',{sensitivity:'base'});
+        });
+      return rows.slice(0,q?250:200);
     }
     function fillSecStudentManualFields(){
       const st=directorioData.find(u=>String(u.id)===$('sec-student')?.value);
@@ -2243,8 +2299,8 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       if(t.estado === 'Cancelado') return 'Cancelado';
       return 'En proceso';
     }
-    function secUserPermsFromForm(){ return {notificaciones:$('sec-perm-notificaciones')?.checked!==false, secretaria:$('sec-perm-secretaria')?.checked!==false, reportes:!!$('sec-perm-reportes')?.checked, auditoria:false}; }
-    function setSecUserPermsForm(perms, rol){ const p={...permissionsFromRole(secRoleToAgentRole(rol||'secretaria')), ...(perms||{})}; if($('sec-perm-notificaciones')) $('sec-perm-notificaciones').checked=p.notificaciones!==false; if($('sec-perm-secretaria')) $('sec-perm-secretaria').checked=p.secretaria!==false; if($('sec-perm-reportes')) $('sec-perm-reportes').checked=!!p.reportes; }
+    function secUserPermsFromForm(){ return {notificaciones:$('sec-perm-notificaciones')?.checked!==false, secretaria:$('sec-perm-secretaria')?.checked!==false, reportes:false, reportes_secretaria:!!$('sec-perm-reportes')?.checked, auditoria:false}; }
+    function setSecUserPermsForm(perms, rol){ const p={...permissionsFromRole(secRoleToAgentRole(rol||'secretaria')), ...(perms||{})}; if($('sec-perm-notificaciones')) $('sec-perm-notificaciones').checked=p.notificaciones!==false; if($('sec-perm-secretaria')) $('sec-perm-secretaria').checked=p.secretaria!==false; if($('sec-perm-reportes')) $('sec-perm-reportes').checked=p.reportes_secretaria!==undefined?!!p.reportes_secretaria:!!p.reportes; }
     
     function secretariaDashboardFilteredData(){
       const from=$('sec-dash-from')?.value||'', to=$('sec-dash-to')?.value||'', estado=$('sec-dash-estado')?.value||'', cat=$('sec-dash-categoria')?.value||'', sec=$('sec-dash-secretaria')?.value||'', tipo=$('sec-dash-tipo')?.value||'';
@@ -2288,29 +2344,97 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       }
       await loadSecretariaData(); renderSecretariaModule(); event.target.value=''; showToast(`Atenciones importadas. Nuevas: ${creados}. Actualizadas: ${actualizados}.`);
     }
-    function secretariaRowsArray(){ return secretariaTicketsData.map(t=>[t.codigo,formatDateTimeEcuador(t.created_at),t.usuario_tipo||'',t.nombre||'',t.cedula||'',t.correo||'',t.correo_personal||'',t.celular||'',t.whatsapp||'',t.asunto||'',t.categoria||'',t.canal||'',t.secretaria_nombre||'',t.estado||'',secTimeLabel(t),t.transferido_it?'Sí':'No',t.valoracion_calificacion||'',t.valoracion_comentario||'']); }
-    function csvEscape(v){ v=String(v??''); return /[",\n;]/.test(v)?'"'+v.replaceAll('"','""')+'"':v; }
-    function exportSecretariaReporteCSV(){ const headers=['Ticket','Fecha','Tipo usuario','Usuario','Cédula','Correo institucional','Correo personal','Celular','WhatsApp','Requerimiento','Categoría','Canal','Secretaria','Estado','Tiempo atención','Transferido IT','Valoración','Comentario']; const csv='\ufeff'+[headers,...secretariaRowsArray()].map(r=>r.map(csvEscape).join(',')).join('\n'); download('reporte_secretaria.csv',csv,'text/csv;charset=utf-8'); }
-    function exportSecretariaReporteExcel(){ download('reporte_secretaria_kpi.xls',secretariaReporteHTML(),'application/vnd.ms-excel;charset=utf-8'); }
-    window.resetSecretariaDashboardFilters=resetSecretariaDashboardFilters; window.exportSecretariaReporteCSV=exportSecretariaReporteCSV; window.exportSecretariaReporteExcel=exportSecretariaReporteExcel; window.handleSecretariaXLSUpload=handleSecretariaXLSUpload;
-
-    function renderReportesModule(){
-      const cont=$('tab-reportes'); if(!cont) return;
-      if(isSecretaryRole()){
-        cont.innerHTML=`<section class="max-w-6xl mx-auto"><div class="bg-white rounded-2xl shadow-sm border p-10 text-center"><div class="w-20 h-20 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl"><i class="fa-solid fa-file-export"></i></div><h2 class="text-2xl font-bold text-instVerdeOscuro mb-2">Reportes de Atención Secretaría</h2><p class="text-instPlomo mb-8">Este perfil solo puede exportar información del módulo Secretaría / Atención Estudiantil.</p><div class="grid grid-cols-1 md:grid-cols-4 gap-5"><button onclick="exportSecretariaReporteCSV()" class="p-6 border-2 rounded-2xl hover:border-green-400 hover:bg-green-50 transition-all flex flex-col items-center gap-3"><i class="fa-solid fa-file-csv text-4xl text-green-600"></i><span class="font-semibold">Reporte Secretaría CSV</span></button><button onclick="exportSecretariaReporteExcel()" class="p-6 border-2 rounded-2xl hover:border-emerald-400 hover:bg-emerald-50 transition-all flex flex-col items-center gap-3"><i class="fa-solid fa-file-excel text-4xl text-emerald-600"></i><span class="font-semibold">Reporte Secretaría Excel</span></button><button onclick="exportSecretariaReporteHTML()" class="p-6 border-2 rounded-2xl hover:border-blue-400 hover:bg-blue-50 transition-all flex flex-col items-center gap-3"><i class="fa-solid fa-file-code text-4xl text-blue-500"></i><span class="font-semibold">Reporte Secretaría HTML</span></button><button onclick="exportSecretariaReporteWord()" class="p-6 border-2 rounded-2xl hover:border-indigo-400 hover:bg-indigo-50 transition-all flex flex-col items-center gap-3"><i class="fa-solid fa-file-word text-4xl text-indigo-500"></i><span class="font-semibold">Reporte Secretaría Word</span></button></div></div></section>`;
+    function currentSecretariaProfile(){
+      const email=normalizeEmail(currentUser?.email||currentProfile?.email||'');
+      return secretariaUsersData.find(u=>String(u.auth_user_id||'')===String(currentUser?.id||'')) || secretariaUsersData.find(u=>normalizeEmail(u.email||'')===email) || null;
+    }
+    function canViewAllSecretariaReports(){ return ['admin','admin_secretaria','supervisora_secretaria'].includes(normalizeRole(currentProfile?.rol)); }
+    function localSecretariaReportScope(){
+      if(canViewAllSecretariaReports()) return [...secretariaTicketsData];
+      const sec=currentSecretariaProfile();
+      if(!sec) return [];
+      return secretariaTicketsData.filter(t=>String(t.secretaria_id||'')===String(sec.id) || normalizeTextForSearch(t.secretaria_nombre||'')===normalizeTextForSearch(sec.nombre||''));
+    }
+    async function loadSecretariaReportData(){
+      if(!hasModuleAccess('tab-sec-reportes')){ secretariaReportData=[]; return; }
+      try{
+        const {data,error}=await sbClient.rpc('get_secretaria_reportes');
+        if(error) throw error;
+        secretariaReportData=Array.isArray(data)?data:[];
+      }catch(e){
+        console.warn('RPC de reportes individuales no disponible; se usa filtrado local. Ejecuta SQL_FIX_REPORTES_SECRETARIA_INDIVIDUALES.sql.',e);
+        secretariaReportData=localSecretariaReportScope();
       }
     }
-    function secretariaReporteHTML(){
-      const total=secretariaTicketsData.length, res=secretariaTicketsData.filter(t=>t.estado==='Resuelto').length, canc=secretariaTicketsData.filter(t=>t.estado==='Cancelado').length, trans=secretariaTicketsData.filter(t=>t.transferido_it).length;
-      const ratings=secretariaTicketsData.map(t=>Number(t.valoracion_calificacion||0)).filter(n=>n>0);
-      const prom=ratings.length?(ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1):'0.0';
-      const chartBlock=(title,obj)=>{const entries=Object.entries(obj||{}).sort((a,b)=>b[1]-a[1]); const max=Math.max(1,...entries.map(e=>e[1])); return `<div class="chart-card"><h3>${esc(title)}</h3>${entries.map(([k,v])=>`<div class="bar-row"><span>${esc(k||'Sin dato')}</span><div class="bar"><i style="width:${Math.round((v/max)*100)}%"></i></div><b>${v}</b></div>`).join('')||'<p>Sin datos</p>'}</div>`};
-      const estado=counts(secretariaTicketsData,'estado'), categoria=counts(secretariaTicketsData,'categoria'), secretaria=counts(secretariaTicketsData,'secretaria_nombre'), tipo=countByValue(secretariaTicketsData,t=>normalizeUserType(t.usuario_tipo));
-      const rows=secretariaTicketsData.map(t=>`<tr><td>${esc(t.codigo)}</td><td>${esc(formatDateTimeEcuador(t.created_at))}</td><td>${esc(t.nombre)}</td><td>${esc(t.cedula||'')}</td><td>${esc(t.correo||'')}</td><td>${esc(t.correo_personal||'')}</td><td>${esc(t.celular||'')}</td><td>${esc(t.whatsapp||'')}</td><td>${esc(t.asunto)}</td><td>${esc(t.categoria||'')}</td><td>${esc(t.canal||'')}</td><td>${esc(t.secretaria_nombre||'')}</td><td>${esc(t.estado)}</td><td>${esc(secTimeLabel(t))}</td><td>${esc(t.valoracion_calificacion||'')}</td><td>${esc(t.valoracion_comentario||'')}</td></tr>`).join('');
-      return `<!doctype html><html><head><meta charset="utf-8"><title>Reporte Secretaría</title><style>body{font-family:Arial;color:#333;margin:24px}h1{color:#006068}.kpi{display:inline-block;border:1px solid #ddd;border-radius:12px;padding:12px;margin:6px;min-width:110px;background:#f8fafc}.kpi b{font-size:24px;color:#006068}.charts{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}.chart-card{border:1px solid #ddd;border-radius:12px;padding:12px}.chart-card h3{margin:0 0 8px;color:#006068}.bar-row{display:grid;grid-template-columns:110px 1fr 35px;gap:6px;align-items:center;font-size:11px;margin:7px 0}.bar{height:12px;background:#e5e7eb;border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:#00CE7C}table{width:100%;border-collapse:collapse;font-size:10px}th{background:#006068;color:#fff}td,th{border:1px solid #ddd;padding:5px;vertical-align:top}@media print{.charts{grid-template-columns:1fr}}</style></head><body><h1>Reporte Atención Secretaría / Estudiantil</h1><p>Generado: ${nowEcuador()}</p><div class="kpi"><b>Total</b><br>${total}</div><div class="kpi"><b>Resueltos</b><br>${res}</div><div class="kpi"><b>Cancelados</b><br>${canc}</div><div class="kpi"><b>Transferidos IT</b><br>${trans}</div><div class="kpi"><b>Valoración</b><br>${prom}</div><h2>Gráficos KPI</h2><div class="charts">${chartBlock('Por estado',estado)}${chartBlock('Por categoría',categoria)}${chartBlock('Por secretaria',secretaria)}${chartBlock('Por tipo de usuario',tipo)}</div><h2>Detalle de atenciones</h2><table><thead><tr><th>Ticket</th><th>Fecha</th><th>Usuario</th><th>Cédula</th><th>Correo inst.</th><th>Correo personal</th><th>Celular</th><th>WhatsApp</th><th>Requerimiento</th><th>Categoría</th><th>Canal</th><th>Secretaria</th><th>Estado</th><th>Tiempo atención</th><th>Valoración</th><th>Comentario</th></tr></thead><tbody>${rows}</tbody></table></body></html>`;
+    function secretariaReportFilteredData(){
+      const from=$('sec-report-from')?.value||'', to=$('sec-report-to')?.value||'', estado=$('sec-report-estado')?.value||'', cat=$('sec-report-categoria')?.value||'', canal=$('sec-report-canal')?.value||'', sec=$('sec-report-secretaria')?.value||'', tipo=$('sec-report-tipo')?.value||'';
+      return secretariaReportData.filter(t=>{const d=formatDateEcuador(t.created_at); return (!from||d>=from)&&(!to||d<=to)&&(!estado||t.estado===estado)&&(!cat||t.categoria===cat)&&(!canal||t.canal===canal)&&(!sec||String(t.secretaria_id||'')===sec||t.secretaria_nombre===sec)&&(!tipo||normalizeUserType(t.usuario_tipo)===tipo);});
     }
-    function exportSecretariaReporteHTML(){ download('reporte_secretaria.html',secretariaReporteHTML(),'text/html;charset=utf-8'); }
-    function exportSecretariaReporteWord(){ download('reporte_secretaria.doc',secretariaReporteHTML(),'application/msword'); }
+    function populateSecretariaReportFilters(){
+      const keep=(id)=>$(id)?.value||'';
+      const set=(id,placeholder,values,valueKey=false)=>{const el=$(id);if(!el)return;const old=keep(id);el.innerHTML=`<option value="">${placeholder}</option>`+values.map(v=>valueKey?`<option value="${esc(v.id)}">${esc(v.nombre)}</option>`:`<option>${esc(v)}</option>`).join('');el.value=old;};
+      set('sec-report-categoria','Todas las categorías',[...new Set(secretariaReportData.map(t=>t.categoria).filter(Boolean))].sort());
+      set('sec-report-canal','Todos los canales',[...new Set(secretariaReportData.map(t=>t.canal).filter(Boolean))].sort());
+      const secSelect=$('sec-report-secretaria');
+      if(secSelect){
+        const old=secSelect.value;
+        const secs=[...new Map(secretariaReportData.filter(t=>t.secretaria_nombre).map(t=>[String(t.secretaria_id||t.secretaria_nombre),{id:String(t.secretaria_id||t.secretaria_nombre),nombre:t.secretaria_nombre}])).values()].sort((a,b)=>a.nombre.localeCompare(b.nombre));
+        secSelect.innerHTML='<option value="">Todas las secretarias</option>'+secs.map(v=>`<option value="${esc(v.id)}">${esc(v.nombre)}</option>`).join('');
+        secSelect.value=old;
+        secSelect.classList.toggle('hidden',!canViewAllSecretariaReports());
+      }
+    }
+    function secretariaResolvedMinutes(t){
+      if(t.estado!=='Resuelto') return null;
+      const n=Number(t.resolution_minutes);
+      if(Number.isFinite(n)&&n>=0) return n;
+      return minutesBetween(t.created_at,t.resolved_at||t.updated_at||t.valoracion_fecha);
+    }
+    function renderSecretariaReports(){
+      if(!$('tab-sec-reportes')) return;
+      populateSecretariaReportFilters();
+      const rows=secretariaReportFilteredData();
+      const total=rows.length, res=rows.filter(t=>t.estado==='Resuelto').length, canc=rows.filter(t=>t.estado==='Cancelado').length, trans=rows.filter(t=>t.transferido_it).length, abiertos=rows.filter(t=>!['Resuelto','Cancelado'].includes(t.estado)).length;
+      const ratings=rows.map(t=>Number(t.valoracion_calificacion||0)).filter(n=>n>0);
+      const mins=rows.map(secretariaResolvedMinutes).filter(n=>Number.isFinite(n));
+      if($('sec-report-kpi-total')) $('sec-report-kpi-total').textContent=total;
+      if($('sec-report-kpi-abiertos')) $('sec-report-kpi-abiertos').textContent=abiertos;
+      if($('sec-report-kpi-resueltos')) $('sec-report-kpi-resueltos').textContent=res;
+      if($('sec-report-kpi-cancelados')) $('sec-report-kpi-cancelados').textContent=canc;
+      if($('sec-report-kpi-transferidos')) $('sec-report-kpi-transferidos').textContent=trans;
+      if($('sec-report-kpi-rating')) $('sec-report-kpi-rating').textContent=ratings.length?(ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1):'0.0';
+      if($('sec-report-kpi-tiempo')) $('sec-report-kpi-tiempo').textContent=mins.length?secFormatMinutes(mins.reduce((a,b)=>a+b,0)/mins.length):'-';
+      if($('sec-report-count')) $('sec-report-count').textContent=`${total} registro${total===1?'':'s'}`;
+      const scope=$('sec-report-scope-label'); if(scope){const sec=currentSecretariaProfile(); scope.innerHTML=canViewAllSecretariaReports()?'<b>Vista consolidada:</b> puedes filtrar y exportar por secretaria.':`<b>Reporte individual:</b> se muestran únicamente las atenciones asignadas a ${esc(sec?.nombre||currentProfile?.nombre_completo||currentUser?.email||'la secretaria actual')}.`;}
+      const body=$('sec-report-body'); if(body) body.innerHTML=rows.map(t=>`<tr class="border-t hover:bg-gray-50"><td class="px-4 py-3"><b class="text-instVerdeOscuro">${esc(t.codigo)}</b></td><td class="px-4 py-3 text-xs">${esc(formatDateTimeEcuador(t.created_at))}</td><td class="px-4 py-3">${esc(t.nombre)}<div class="text-xs text-gray-500">${esc(normalizeUserType(t.usuario_tipo))} · ${esc(t.cedula||'')}</div></td><td class="px-4 py-3">${esc(t.asunto||'')}<div class="text-xs text-gray-500 max-w-xs truncate" title="${esc(t.descripcion||'')}">${esc(t.descripcion||'')}</div></td><td class="px-4 py-3">${esc(t.categoria||'')}<div class="text-xs text-gray-500">${esc(t.canal||'')}</div></td><td class="px-4 py-3">${esc(t.secretaria_nombre||'Sin asignar')}</td><td class="px-4 py-3">${esc(t.estado||'')}</td><td class="px-4 py-3 text-xs">${esc(secTimeLabel(t))}</td><td class="px-4 py-3">${Number(t.valoracion_calificacion||0)>0?`<span class="text-yellow-500 font-bold">${'★'.repeat(Number(t.valoracion_calificacion))}</span><div class="text-xs text-gray-500">${esc(t.valoracion_comentario||'')}</div>`:'<span class="text-gray-400">Pendiente</span>'}</td></tr>`).join('')||'<tr><td colspan="9" class="p-8 text-center text-gray-400">No existen registros para los filtros seleccionados.</td></tr>';
+      const st=counts(rows,'estado'), ct=counts(rows,'categoria'), cn=counts(rows,'canal'), sc=counts(rows,'secretaria_nombre');
+      renderChart('secReportChartEstado','doughnut',Object.keys(st),Object.values(st),'Atenciones');
+      renderChart('secReportChartCategoria','bar',Object.keys(ct),Object.values(ct),'Atenciones');
+      renderChart('secReportChartCanal','bar',Object.keys(cn),Object.values(cn),'Atenciones');
+      renderChart('secReportChartSecretaria','bar',Object.keys(sc),Object.values(sc),'Atenciones');
+    }
+    function resetSecretariaReportFilters(){ ['sec-report-from','sec-report-to','sec-report-estado','sec-report-categoria','sec-report-canal','sec-report-secretaria','sec-report-tipo'].forEach(id=>{if($(id))$(id).value=''}); renderSecretariaReports(); }
+    function secretariaRowsArray(rows=secretariaReportFilteredData()){ return rows.map(t=>[t.codigo,formatDateTimeEcuador(t.created_at),t.usuario_tipo||'',t.nombre||'',t.cedula||'',t.correo||'',t.correo_personal||'',t.celular||'',t.whatsapp||'',t.asunto||'',t.categoria||'',t.canal||'',t.secretaria_nombre||'',t.estado||'',secTimeLabel(t),t.transferido_it?'Sí':'No',t.valoracion_calificacion||'',t.valoracion_comentario||'']); }
+    function csvEscape(v){ v=String(v??''); return /[",\n;]/.test(v)?'"'+v.replaceAll('"','""')+'"':v; }
+    function secretariaReportFilename(ext){const sec=currentSecretariaProfile();const scope=canViewAllSecretariaReports()?'consolidado':normalizeTextForSearch(sec?.nombre||currentProfile?.nombre_completo||'individual').replaceAll(' ','_');return `reporte_secretaria_${scope}_${formatDateEcuador(new Date())}.${ext}`;}
+    function exportSecretariaReporteCSV(){ const rows=secretariaReportFilteredData(); const headers=['Ticket','Fecha','Tipo usuario','Usuario','Cédula','Correo institucional','Correo personal','Celular','WhatsApp','Requerimiento','Categoría','Canal','Secretaria','Estado','Tiempo atención','Transferido IT','Valoración','Comentario']; const csv='\ufeff'+[headers,...secretariaRowsArray(rows)].map(r=>r.map(csvEscape).join(',')).join('\n'); download(secretariaReportFilename('csv'),csv,'text/csv;charset=utf-8'); }
+    function exportSecretariaReporteExcel(){ download(secretariaReportFilename('xls'),secretariaReporteHTML(secretariaReportFilteredData()),'application/vnd.ms-excel;charset=utf-8'); }
+    function renderReportesModule(){ /* Reportes IT permanecen independientes de Secretaría. */ }
+    function secretariaReporteHTML(rows=secretariaReportFilteredData()){
+      const total=rows.length, res=rows.filter(t=>t.estado==='Resuelto').length, canc=rows.filter(t=>t.estado==='Cancelado').length, trans=rows.filter(t=>t.transferido_it).length;
+      const ratings=rows.map(t=>Number(t.valoracion_calificacion||0)).filter(n=>n>0);
+      const prom=ratings.length?(ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1):'0.0';
+      const mins=rows.map(secretariaResolvedMinutes).filter(n=>Number.isFinite(n)); const tiempo=mins.length?secFormatMinutes(mins.reduce((a,b)=>a+b,0)/mins.length):'-';
+      const chartBlock=(title,obj)=>{const entries=Object.entries(obj||{}).sort((a,b)=>b[1]-a[1]); const max=Math.max(1,...entries.map(e=>e[1])); return `<div class="chart-card"><h3>${esc(title)}</h3>${entries.map(([k,v])=>`<div class="bar-row"><span>${esc(k||'Sin dato')}</span><div class="bar"><i style="width:${Math.round((v/max)*100)}%"></i></div><b>${v}</b></div>`).join('')||'<p>Sin datos</p>'}</div>`};
+      const estado=counts(rows,'estado'), categoria=counts(rows,'categoria'), secretaria=counts(rows,'secretaria_nombre'), tipo=countByValue(rows,t=>normalizeUserType(t.usuario_tipo));
+      const detail=rows.map(t=>`<tr><td>${esc(t.codigo)}</td><td>${esc(formatDateTimeEcuador(t.created_at))}</td><td>${esc(t.nombre)}</td><td>${esc(t.cedula||'')}</td><td>${esc(t.correo||'')}</td><td>${esc(t.correo_personal||'')}</td><td>${esc(t.celular||'')}</td><td>${esc(t.whatsapp||'')}</td><td>${esc(t.asunto)}</td><td>${esc(t.categoria||'')}</td><td>${esc(t.canal||'')}</td><td>${esc(t.secretaria_nombre||'')}</td><td>${esc(t.estado)}</td><td>${esc(secTimeLabel(t))}</td><td>${esc(t.valoracion_calificacion||'')}</td><td>${esc(t.valoracion_comentario||'')}</td></tr>`).join('');
+      const scope=canViewAllSecretariaReports()?'Consolidado de Secretaría':`Reporte individual de ${currentSecretariaProfile()?.nombre||currentProfile?.nombre_completo||''}`;
+      return `<!doctype html><html><head><meta charset="utf-8"><title>Reporte Secretaría</title><style>body{font-family:Arial;color:#333;margin:24px}h1{color:#006068}.small{font-size:12px;color:#666}.kpi{display:inline-block;border:1px solid #ddd;border-radius:12px;padding:12px;margin:6px;min-width:110px;background:#f8fafc}.kpi b{font-size:24px;color:#006068}.charts{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}.chart-card{border:1px solid #ddd;border-radius:12px;padding:12px}.bar-row{display:grid;grid-template-columns:120px 1fr 35px;gap:6px;align-items:center;font-size:11px;margin:7px 0}.bar{height:12px;background:#eee;border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:#00CE7C}table{width:100%;border-collapse:collapse;font-size:9px}th{background:#006068;color:white;padding:6px}td{border:1px solid #ddd;padding:5px;vertical-align:top}@media print{.charts{grid-template-columns:1fr 1fr}}</style></head><body><h1>Reporte de Atención Secretaría / Estudiantil</h1><p class="small">${esc(scope)} · Generado: ${esc(formatDateTimeEcuador(new Date()))}</p><div><div class="kpi">Total<br><b>${total}</b></div><div class="kpi">Resueltos<br><b>${res}</b></div><div class="kpi">Cancelados<br><b>${canc}</b></div><div class="kpi">Transferidos IT<br><b>${trans}</b></div><div class="kpi">Valoración<br><b>${prom}</b></div><div class="kpi">Tiempo promedio<br><b>${esc(tiempo)}</b></div></div><div class="charts">${chartBlock('Por estado',estado)}${chartBlock('Por categoría',categoria)}${chartBlock('Por secretaria',secretaria)}${chartBlock('Por tipo de usuario',tipo)}</div><h2>Detalle de atenciones</h2><table><thead><tr><th>Ticket</th><th>Fecha</th><th>Usuario</th><th>Cédula</th><th>Correo inst.</th><th>Correo personal</th><th>Celular</th><th>WhatsApp</th><th>Requerimiento</th><th>Categoría</th><th>Canal</th><th>Secretaria</th><th>Estado</th><th>Tiempo</th><th>Valoración</th><th>Comentario</th></tr></thead><tbody>${detail}</tbody></table></body></html>`;
+    }
+    function exportSecretariaReporteHTML(){ download(secretariaReportFilename('html'),secretariaReporteHTML(),'text/html;charset=utf-8'); }
+    function exportSecretariaReporteWord(){ download(secretariaReportFilename('doc'),secretariaReporteHTML(),'application/msword'); }
+    window.resetSecretariaReportFilters=resetSecretariaReportFilters; window.exportSecretariaReporteCSV=exportSecretariaReporteCSV; window.exportSecretariaReporteExcel=exportSecretariaReporteExcel; window.exportSecretariaReporteHTML=exportSecretariaReporteHTML; window.exportSecretariaReporteWord=exportSecretariaReporteWord; window.handleSecretariaXLSUpload=handleSecretariaXLSUpload;
+
     function renderSecretariaModule(){
       if(!$('tab-secretaria')) return;
       const view = activeSecView || 'registros';
@@ -2340,8 +2464,8 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       const users=$('sec-users-list'); if(users){ users.innerHTML=secretariaUsersData.map(u=>`<div class="border rounded-xl p-3"><div class="flex justify-between gap-2"><div><b class="text-instVerdeOscuro">${esc(u.nombre)}</b><p class="text-xs text-gray-500">${esc(u.email||'')} · ${esc(u.rol)}</p></div><span class="text-xs px-2 py-1 rounded-full ${u.activo?'bg-green-100 text-green-700':'bg-gray-100 text-gray-500'}">${u.activo?'Activo':'Inactivo'}</span></div><div class="mt-2 flex gap-2"><button onclick='editSecUser(${JSON.stringify(u).replaceAll("'","&#39;")})' class="text-blue-600 text-sm font-bold">Editar</button><button onclick="toggleSecUser('${u.id}',${u.activo?false:true})" class="text-orange-600 text-sm font-bold">${u.activo?'Inactivar':'Activar'}</button><button onclick="copySecAccessLink('${u.id}')" class="text-green-600 text-sm font-bold">Acceso</button><button onclick="deleteSecUser('${u.id}')" class="text-red-600 text-sm font-bold">Eliminar</button></div></div>`).join('')||'<p class="text-gray-400">No hay secretarias registradas.</p>'; }
       if(view==='directorio') renderSecDirectoryList();
     }
-    document.addEventListener('input', e=>{ if(e.target?.id==='sec-search-student') renderSecretariaModule(); if(e.target?.id==='sec-filter') renderSecretariaModule(); if(e.target?.id==='sec-dir-filter') renderSecDirectoryList(); if(['sec-dash-from','sec-dash-to','sec-dash-estado','sec-dash-categoria','sec-dash-secretaria','sec-dash-tipo'].includes(e.target?.id)) renderSecretariaModule(); });
-    document.addEventListener('change', e=>{ if(e.target?.id==='sec-student') fillSecStudentManualFields(); });
+    document.addEventListener('input', e=>{ if(e.target?.id==='sec-search-student') renderSecretariaModule(); if(e.target?.id==='sec-filter') renderSecretariaModule(); if(e.target?.id==='sec-dir-filter') renderSecDirectoryList(); if(['sec-dash-from','sec-dash-to','sec-dash-estado','sec-dash-categoria','sec-dash-secretaria','sec-dash-tipo'].includes(e.target?.id)) renderSecretariaModule(); if(['sec-report-from','sec-report-to','sec-report-estado','sec-report-categoria','sec-report-canal','sec-report-secretaria','sec-report-tipo'].includes(e.target?.id)) renderSecretariaReports(); });
+    document.addEventListener('change', e=>{ if(e.target?.id==='sec-student') fillSecStudentManualFields(); if(['sec-report-from','sec-report-to','sec-report-estado','sec-report-categoria','sec-report-canal','sec-report-secretaria','sec-report-tipo'].includes(e.target?.id)) renderSecretariaReports(); });
     document.addEventListener('submit', async e=>{
       if(e.target?.id==='sec-form-user'){ e.preventDefault(); if(!canManageSecretariaProfiles()) return showToast('Solo Admin Secretaría puede administrar perfiles de Secretaría.','error'); const id=$('sec-user-id').value; const payload={nombre:$('sec-user-name').value,email:$('sec-user-email').value,rol:$('sec-user-role').value,activo:$('sec-user-active').checked,permisos:secUserPermsFromForm()}; let res; if(id) res=await sbClient.from('secretaria_usuarios').update(payload).eq('id',id); else res=await sbClient.from('secretaria_usuarios').insert(payload); if(res.error) return showToast(res.error.message,'error'); await syncSecretariaAccessProfile(payload); await secAudit(id?'Editar perfil Secretaría':'Crear perfil Secretaría','secretaria_usuarios',id||null,null,payload); e.target.reset(); $('sec-user-id').value=''; await loadSecretariaData(); renderSecretariaModule(); showToast('Perfil de Secretaría guardado'); }
       if(e.target?.id==='sec-dir-form'){ await saveSecDirectory(e); }
@@ -2381,7 +2505,7 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
         else res=await sbClient.from('directorio').insert(payload);
       }
       if(res.error) return showToast(res.error.message,'error');
-      await loadDirectory(); clearSecDirectoryForm(); renderSecDirectoryList(); showToast('Directorio actualizado para Secretaría');
+      await loadDirectory(); clearSecDirectoryForm(); renderSecDirectoryList(); renderSecretariaModule(); showToast('Directorio actualizado para Secretaría');
     }
     window.clearSecDirectoryForm=clearSecDirectoryForm; window.fillSecDirectoryForm=fillSecDirectoryForm;
 
