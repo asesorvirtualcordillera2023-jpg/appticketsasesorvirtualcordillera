@@ -190,6 +190,19 @@
     .notification-dot{min-width:1.25rem;height:1.25rem;border-radius:9999px;background:#E47E3D;color:#fff;font-size:.7rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 .35rem}
     .notif-card{border:1px solid #e5e7eb;border-radius:1rem;background:#fff;padding:1rem;box-shadow:0 1px 2px rgba(0,0,0,.04)}
     .notif-unread{border-left:5px solid #00CE7C;background:#f0fdf4}
+    .scroll-float-target{overflow:auto!important;max-width:100%;scrollbar-gutter:stable both-edges;overscroll-behavior:contain}
+    .scroll-float-target thead{position:sticky;top:0;z-index:8;background:#f9fafb}
+    .scroll-float-target::-webkit-scrollbar,.modal-scroll-body::-webkit-scrollbar{width:13px;height:13px}
+    .scroll-float-target::-webkit-scrollbar-track,.modal-scroll-body::-webkit-scrollbar-track{background:#e5e7eb;border-radius:999px}
+    .scroll-float-target::-webkit-scrollbar-thumb,.modal-scroll-body::-webkit-scrollbar-thumb{background:linear-gradient(135deg,#00CE7C,#006068);border:3px solid #e5e7eb;border-radius:999px}
+    .floating-x-scroll{height:18px;overflow-x:auto;overflow-y:hidden;position:sticky;bottom:0;z-index:35;background:rgba(255,255,255,.96);border-top:1px solid #d1d5db;box-shadow:0 -6px 14px rgba(0,96,104,.10);scrollbar-gutter:stable}
+    .floating-x-scroll>div{height:1px}
+    .floating-x-scroll::-webkit-scrollbar{height:14px}
+    .floating-x-scroll::-webkit-scrollbar-track{background:#e5e7eb;border-radius:999px}
+    .floating-x-scroll::-webkit-scrollbar-thumb{background:linear-gradient(90deg,#00CE7C,#006068);border:3px solid #e5e7eb;border-radius:999px}
+    .modal-scroll-panel{max-height:94vh;display:flex;flex-direction:column;overflow:hidden}
+    .modal-scroll-body{flex:1;min-height:0;overflow:auto;scrollbar-gutter:stable both-edges}
+    .history-comment-card{border-left:4px solid #00CE7C;background:#f0fdf4;border-radius:.75rem;padding:.7rem .85rem}
   </style>
 </head>
 <body class="h-screen flex overflow-hidden text-gray-800">
@@ -516,7 +529,7 @@
 
           <div id="sec-main-split" class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div id="sec-new-card" class="bg-white rounded-2xl shadow-sm border p-6 h-fit"><h3 class="font-semibold text-instVerdeOscuro mb-4"><i class="fa-solid fa-ticket mr-2"></i>Nueva atención</h3><form id="sec-form-ticket" class="space-y-3"><select id="sec-user-type" class="field"><option>Estudiante</option><option>Docente</option><option>Administrativo</option><option>Externo</option></select><input id="sec-search-student" class="field" placeholder="Buscar estudiante, docente o administrativo"><select id="sec-student" class="field" size="6"></select><div class="grid grid-cols-1 md:grid-cols-2 gap-2"><input id="sec-nombre" class="field" placeholder="Nombre externo/manual"><input id="sec-cedula" class="field" placeholder="Cédula / identificación"><input id="sec-correo" class="field" placeholder="Correo institucional"><input id="sec-correo-personal" class="field" placeholder="Correo personal"><input id="sec-celular" class="field" placeholder="Celular"><input id="sec-whatsapp" class="field" placeholder="WhatsApp"></div><input id="sec-asunto" class="field" placeholder="Requerimiento" required><select id="sec-categoria" class="field"></select><select id="sec-canal" class="field"></select><select id="sec-secretaria" class="field"></select><textarea id="sec-descripcion" class="field" rows="3" placeholder="Detalle de la atención"></textarea><button class="btn btn-green w-full py-2">Guardar atención</button></form></div>
-            <div id="sec-tickets-card" class="xl:col-span-2 bg-white rounded-2xl shadow-sm border overflow-hidden"><div class="p-4 border-b bg-gray-50 flex flex-col md:flex-row gap-3 md:items-center md:justify-between"><div><h3 class="font-semibold">Tickets de Secretaría</h3><p class="text-xs text-gray-500">Descripción de la asignación y tiempo de atención del requerimiento.</p></div><div class="flex flex-wrap items-center gap-2"><a href="plantilla_secretaria_atenciones.xls" download class="btn btn-muted px-3 py-2 text-xs"><i class="fa-solid fa-download"></i> Plantilla XLS</a><label class="btn btn-green px-3 py-2 text-xs cursor-pointer"><i class="fa-solid fa-file-import"></i> Importar XLS/CSV<input type="file" id="sec-xls-file" accept=".csv,.xls,.xlsx" class="hidden" onchange="handleSecretariaXLSUpload(event)"></label><input id="sec-filter" class="field py-2 w-72" placeholder="Filtrar atenciones..."></div></div><div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="bg-gray-50"><tr><th class="px-4 py-3">Ticket</th><th class="px-4 py-3">Usuario</th><th class="px-4 py-3">Caso</th><th class="px-4 py-3">Asignación</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3">Tiempo</th><th class="px-4 py-3">Valoración</th><th class="px-4 py-3 text-center">Acciones</th></tr></thead><tbody id="sec-tickets-body"></tbody></table></div></div>
+            <div id="sec-tickets-card" class="xl:col-span-2 bg-white rounded-2xl shadow-sm border overflow-hidden"><div class="p-4 border-b bg-gray-50 flex flex-col md:flex-row gap-3 md:items-center md:justify-between"><div><h3 class="font-semibold">Tickets de Secretaría</h3><p class="text-xs text-gray-500">Descripción de la asignación y tiempo de atención del requerimiento.</p></div><div class="flex flex-wrap items-center gap-2"><a href="plantilla_secretaria_atenciones.xls" download class="btn btn-muted px-3 py-2 text-xs"><i class="fa-solid fa-download"></i> Plantilla XLS</a><label class="btn btn-green px-3 py-2 text-xs cursor-pointer"><i class="fa-solid fa-file-import"></i> Importar XLS/CSV<input type="file" id="sec-xls-file" accept=".csv,.xls,.xlsx" class="hidden" onchange="handleSecretariaXLSUpload(event)"></label><input id="sec-filter" class="field py-2 w-72" placeholder="Filtrar atenciones..."></div></div><div id="sec-tickets-scroll" class="scroll-float-target max-h-[65vh]"><table class="w-full min-w-[1050px] text-left text-sm"><thead class="bg-gray-50"><tr><th class="px-4 py-3">Ticket</th><th class="px-4 py-3">Usuario</th><th class="px-4 py-3">Caso</th><th class="px-4 py-3">Asignación</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3">Tiempo</th><th class="px-4 py-3">Valoración</th><th class="px-4 py-3 text-center">Acciones</th></tr></thead><tbody id="sec-tickets-body"></tbody></table></div></div>
           </div>
           <div id="sec-directory-card" class="hidden bg-white rounded-2xl shadow-sm border overflow-hidden mt-6">
             <div class="p-4 border-b bg-gray-50 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
@@ -540,15 +553,15 @@
                 </div>
                 <div class="flex gap-2"><button class="btn btn-green flex-1 py-2"><i class="fa-solid fa-floppy-disk"></i> Guardar directorio</button><button type="button" onclick="clearSecDirectoryForm()" class="btn btn-muted py-2"><i class="fa-solid fa-broom"></i></button></div>
               </form>
-              <div class="xl:col-span-2 overflow-x-auto"><table class="w-full text-left text-sm"><thead class="bg-gray-50"><tr><th class="px-4 py-3">Usuario</th><th class="px-4 py-3">Contacto</th><th class="px-4 py-3">Tipo</th><th class="px-4 py-3 text-center">Acción</th></tr></thead><tbody id="sec-dir-results"></tbody></table></div>
+              <div id="sec-directory-scroll" class="xl:col-span-2 scroll-float-target max-h-[65vh]"><table class="w-full min-w-[760px] text-left text-sm"><thead class="bg-gray-50"><tr><th class="px-4 py-3">Usuario</th><th class="px-4 py-3">Contacto</th><th class="px-4 py-3">Tipo</th><th class="px-4 py-3 text-center">Acción</th></tr></thead><tbody id="sec-dir-results"></tbody></table></div>
             </div>
           </div>
-          <div id="sec-users-admin-panel" class="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-6"><div class="bg-white rounded-2xl border p-6"><h3 class="font-semibold text-instVerdeOscuro mb-4"><i class="fa-solid fa-user-plus mr-2"></i>Secretarias / Supervisora</h3><form id="sec-form-user" class="space-y-3"><input id="sec-user-id" type="hidden"><input id="sec-user-name" class="field" placeholder="Nombre" required><input id="sec-user-email" class="field" placeholder="Correo"><select id="sec-user-role" class="field"><option value="secretaria">Secretaria</option><option value="supervisora">Supervisora</option><option value="admin">Admin Secretaría</option></select><div class="border rounded-xl p-3 bg-gray-50"><p class="text-xs font-bold text-instVerdeOscuro mb-2">Módulos activos</p><label class="flex items-center gap-2 text-sm"><input id="sec-perm-notificaciones" type="checkbox" checked> Notificaciones</label><label class="flex items-center gap-2 text-sm"><input id="sec-perm-secretaria" type="checkbox" checked> Atención Secretaría</label><label class="flex items-center gap-2 text-sm"><input id="sec-perm-reportes" type="checkbox" checked> Reportes de Secretaría</label></div><label class="flex items-center gap-2 text-sm"><input id="sec-user-active" type="checkbox" checked> Activo</label><button class="btn btn-primary w-full py-2">Guardar perfil</button></form></div><div class="xl:col-span-2 bg-white rounded-2xl border overflow-hidden"><div class="p-4 bg-gray-50 border-b"><h3 class="font-semibold">Personal de Secretaría</h3></div><div id="sec-users-list" class="p-4 grid md:grid-cols-2 gap-3"></div></div></div>
+          <div id="sec-users-admin-panel" class="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-6"><div class="bg-white rounded-2xl border p-6"><h3 class="font-semibold text-instVerdeOscuro mb-4"><i class="fa-solid fa-user-plus mr-2"></i>Secretarias / Supervisora</h3><form id="sec-form-user" class="space-y-3"><input id="sec-user-id" type="hidden"><input id="sec-user-name" class="field" placeholder="Nombre" required><input id="sec-user-email" class="field" placeholder="Correo"><select id="sec-user-role" class="field"><option value="secretaria">Secretaria</option><option value="supervisora">Supervisora</option><option value="admin">Admin Secretaría</option></select><div class="border rounded-xl p-3 bg-gray-50"><p class="text-xs font-bold text-instVerdeOscuro mb-2">Módulos activos</p><label class="flex items-center gap-2 text-sm"><input id="sec-perm-notificaciones" type="checkbox" checked> Notificaciones</label><label class="flex items-center gap-2 text-sm"><input id="sec-perm-secretaria" type="checkbox" checked> Atención Secretaría</label><label id="sec-perm-reportes-wrap" class="flex items-center gap-2 text-sm"><input id="sec-perm-reportes" type="checkbox"> Reportes de Secretaría <span class="text-[10px] text-gray-500">(solo supervisión/administración)</span></label></div><label class="flex items-center gap-2 text-sm"><input id="sec-user-active" type="checkbox" checked> Activo</label><button class="btn btn-primary w-full py-2">Guardar perfil</button></form></div><div class="xl:col-span-2 bg-white rounded-2xl border overflow-hidden"><div class="p-4 bg-gray-50 border-b"><h3 class="font-semibold">Personal de Secretaría</h3></div><div id="sec-users-list" class="p-4 grid md:grid-cols-2 gap-3"></div></div></div>
         </section>
 
         <section id="tab-sec-reportes" class="tab-content max-w-7xl mx-auto">
           <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
-            <div class="flex items-center gap-3"><div class="module-logo-wrap"><i class="fa-solid fa-file-export text-white text-xl"></i></div><div><h2 class="text-2xl font-bold text-instVerdeOscuro">Reportes de Secretaría</h2><p class="text-sm text-instPlomo">Reporte independiente de Atención Secretaría. Cada secretaria visualiza únicamente sus atenciones; supervisión y administración pueden consultar el consolidado.</p></div></div>
+            <div class="flex items-center gap-3"><div class="module-logo-wrap"><i class="fa-solid fa-file-export text-white text-xl"></i></div><div><h2 class="text-2xl font-bold text-instVerdeOscuro">Reportes de Secretaría</h2><p class="text-sm text-instPlomo">Reporte consolidado de Atención Secretaría, disponible únicamente para supervisión y administración.</p></div></div>
             <div class="flex flex-wrap gap-2">
               <button onclick="exportSecretariaReporteCSV()" class="btn btn-green px-4 py-2"><i class="fa-solid fa-file-csv"></i> CSV</button>
               <button onclick="exportSecretariaReporteExcel()" class="btn btn-green px-4 py-2"><i class="fa-solid fa-file-excel"></i> Excel</button>
@@ -864,20 +877,20 @@
       advanced: {notificaciones:true, form:true, registros:true, dashboard:true, reportes:true, informe:false, directorio:true, agentes:false, periodos:false, config:false},
       coordinator: {notificaciones:true, form:true, registros:true, dashboard:true, reportes:true, informe:true, directorio:true, agentes:false, periodos:false, config:false},
       admin: {notificaciones:true, form:true, registros:true, dashboard:true, reportes:true, informe:true, directorio:true, agentes:true, periodos:true, secretaria:true, reportes_secretaria:true, auditoria:true, config:true},
-      secretaria: {notificaciones:true, form:false, registros:false, dashboard:false, reportes:false, informe:false, directorio:false, agentes:false, periodos:false, secretaria:true, reportes_secretaria:true, auditoria:false, config:false},
+      secretaria: {notificaciones:true, form:false, registros:false, dashboard:false, reportes:false, informe:false, directorio:false, agentes:false, periodos:false, secretaria:true, reportes_secretaria:false, auditoria:false, config:false},
       supervisora_secretaria: {notificaciones:true, form:false, registros:false, dashboard:false, reportes:false, informe:false, directorio:false, agentes:false, periodos:false, secretaria:true, reportes_secretaria:true, auditoria:false, config:false},
       admin_secretaria: {notificaciones:true, form:false, registros:false, dashboard:false, reportes:false, informe:false, directorio:false, agentes:false, periodos:false, secretaria:true, reportes_secretaria:true, auditoria:false, config:false}
     };
     const roleLabels = {admin:'Administrador', coordinator:'Coordinador', advanced:'Agente soporte avanzado', agent:'Agente básico', secretaria:'Secretaria', supervisora_secretaria:'Supervisora Secretaría', admin_secretaria:'Admin Secretaría'};
     function permissionsFromRole(role){ return {...(ROLE_PRESETS[role] || ROLE_PRESETS.agent)}; }
     function normalizeRole(role){ return ['admin','coordinator','advanced','agent','secretaria','supervisora_secretaria','admin_secretaria'].includes(role) ? role : 'agent'; }
-    function normalizePermissions(role, perms){ const r=normalizeRole(role); const custom=(perms && typeof perms==='object')?perms:{}; const out={...permissionsFromRole(r),...custom}; if(['secretaria','supervisora_secretaria','admin_secretaria'].includes(r)){ out.reportes=false; if(!Object.prototype.hasOwnProperty.call(custom,'reportes_secretaria')) out.reportes_secretaria=true; } return out; }
+    function normalizePermissions(role, perms){ const r=normalizeRole(role); const custom=(perms && typeof perms==='object')?perms:{}; const out={...permissionsFromRole(r),...custom}; if(['secretaria','supervisora_secretaria','admin_secretaria'].includes(r)) out.reportes=false; if(r==='secretaria') out.reportes_secretaria=false; if(['supervisora_secretaria','admin_secretaria'].includes(r)) out.reportes_secretaria=true; return out; }
     function userPermissions(){ return normalizePermissions(currentProfile?.rol, currentProfile?.permisos); }
     function hasModuleAccess(tabId){
       if(isAdmin()) return true;
       if(['tab-secretaria','tab-sec-nueva','tab-sec-registros','tab-sec-directorio'].includes(tabId)) return !!userPermissions().secretaria;
       if(tabId==='tab-sec-dashboard') return !!userPermissions().secretaria && canViewSecretariaDashboard();
-      if(tabId==='tab-sec-reportes') return !!userPermissions().reportes_secretaria;
+      if(tabId==='tab-sec-reportes') return canViewAllSecretariaReports() && !!userPermissions().reportes_secretaria;
       const mod = MODULE_PERMISSIONS.find(m => m.tab === tabId || ('tab-'+m.key) === tabId);
       if(!mod) return true;
       return !!userPermissions()[mod.key];
@@ -902,6 +915,34 @@
     }
 
     function showToast(message,type='success'){const c=$('toast-container');const t=document.createElement('div');t.className=`${type==='success'?'bg-instVerdeClaro':'bg-instTomate'} text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 transform transition-all duration-300 translate-x-full opacity-0 pointer-events-auto`;t.innerHTML=`<i class="fa-solid ${type==='success'?'fa-check-circle':'fa-circle-exclamation'} text-xl"></i><span class="font-medium text-sm">${esc(message)}</span>`;c.appendChild(t);setTimeout(()=>t.classList.remove('translate-x-full','opacity-0'),10);setTimeout(()=>{t.classList.add('translate-x-full','opacity-0');setTimeout(()=>t.remove(),300)},3200)}
+
+    function initFloatingScrollbars(root=document){
+      const targets=[...root.querySelectorAll('.scroll-float-target')];
+      targets.forEach(target=>{
+        if(target.dataset.floatScrollbarReady==='1'){
+          target._refreshFloatingScrollbar?.();
+          return;
+        }
+        target.dataset.floatScrollbarReady='1';
+        const bar=document.createElement('div');
+        bar.className='floating-x-scroll';
+        bar.setAttribute('aria-label','Barra horizontal flotante');
+        const spacer=document.createElement('div');
+        bar.appendChild(spacer);
+        target.insertAdjacentElement('afterend',bar);
+        let syncing=false;
+        const refresh=()=>{
+          spacer.style.width=Math.max(target.scrollWidth,target.clientWidth)+'px';
+          bar.style.display=target.scrollWidth>target.clientWidth+2?'block':'none';
+          if(!syncing) bar.scrollLeft=target.scrollLeft;
+        };
+        target._refreshFloatingScrollbar=refresh;
+        target.addEventListener('scroll',()=>{ if(syncing)return; syncing=true; bar.scrollLeft=target.scrollLeft; requestAnimationFrame(()=>syncing=false); },{passive:true});
+        bar.addEventListener('scroll',()=>{ if(syncing)return; syncing=true; target.scrollLeft=bar.scrollLeft; requestAnimationFrame(()=>syncing=false); },{passive:true});
+        if(window.ResizeObserver){ const ro=new ResizeObserver(refresh); ro.observe(target); const table=target.querySelector('table'); if(table) ro.observe(table); }
+        refresh();
+      });
+    }
 
     function getParamRobust(param){const url=window.location.href;const regex=new RegExp('[?&#]'+param+'=([^&#]*)','i');const match=regex.exec(url);return match?decodeURIComponent(match[1]).trim():null}
     function isRatingRoute(){return !!getParamRobust('rate_ticket') || !!getParamRobust('rate_atencion')}
@@ -1150,6 +1191,7 @@
       if(effectiveTabId==='tab-secretaria'){loadSecretariaData().then(renderSecretariaModule)}
       if(effectiveTabId==='tab-auditoria'){loadAuditoriaGeneral().then(renderAuditoriaGeneral)}
       applyRoleAccess();
+      setTimeout(initFloatingScrollbars,50);
     }
     window.switchTab=switchTab; window.toggleMobileMenu=()=>{const s=document.querySelector('aside');s.classList.toggle('hidden');s.classList.toggle('absolute');s.classList.toggle('h-full');s.classList.toggle('z-50')};
 
@@ -2299,8 +2341,9 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       if(t.estado === 'Cancelado') return 'Cancelado';
       return 'En proceso';
     }
-    function secUserPermsFromForm(){ return {notificaciones:$('sec-perm-notificaciones')?.checked!==false, secretaria:$('sec-perm-secretaria')?.checked!==false, reportes:false, reportes_secretaria:!!$('sec-perm-reportes')?.checked, auditoria:false}; }
-    function setSecUserPermsForm(perms, rol){ const p={...permissionsFromRole(secRoleToAgentRole(rol||'secretaria')), ...(perms||{})}; if($('sec-perm-notificaciones')) $('sec-perm-notificaciones').checked=p.notificaciones!==false; if($('sec-perm-secretaria')) $('sec-perm-secretaria').checked=p.secretaria!==false; if($('sec-perm-reportes')) $('sec-perm-reportes').checked=p.reportes_secretaria!==undefined?!!p.reportes_secretaria:!!p.reportes; }
+    function syncSecReportPermissionField(){ const role=$('sec-user-role')?.value||'secretaria'; const allowed=['supervisora','admin'].includes(role); const input=$('sec-perm-reportes'); const wrap=$('sec-perm-reportes-wrap'); if(input){ input.disabled=!allowed; if(!allowed) input.checked=false; else if(!input.dataset.touched) input.checked=true; } if(wrap) wrap.classList.toggle('opacity-50',!allowed); }
+    function secUserPermsFromForm(){ const role=$('sec-user-role')?.value||'secretaria'; return {notificaciones:$('sec-perm-notificaciones')?.checked!==false, secretaria:$('sec-perm-secretaria')?.checked!==false, reportes:false, reportes_secretaria:['supervisora','admin'].includes(role) && !!$('sec-perm-reportes')?.checked, auditoria:false}; }
+    function setSecUserPermsForm(perms, rol){ const role=rol||'secretaria'; const p={...permissionsFromRole(secRoleToAgentRole(role)), ...(perms||{})}; if($('sec-perm-notificaciones')) $('sec-perm-notificaciones').checked=p.notificaciones!==false; if($('sec-perm-secretaria')) $('sec-perm-secretaria').checked=p.secretaria!==false; if($('sec-user-role')) $('sec-user-role').value=role; if($('sec-perm-reportes')){ $('sec-perm-reportes').dataset.touched=''; $('sec-perm-reportes').checked=['supervisora','admin'].includes(role) && p.reportes_secretaria!==false; } syncSecReportPermissionField(); }
     
     function secretariaDashboardFilteredData(){
       const from=$('sec-dash-from')?.value||'', to=$('sec-dash-to')?.value||'', estado=$('sec-dash-estado')?.value||'', cat=$('sec-dash-categoria')?.value||'', sec=$('sec-dash-secretaria')?.value||'', tipo=$('sec-dash-tipo')?.value||'';
@@ -2465,7 +2508,7 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       if(view==='directorio') renderSecDirectoryList();
     }
     document.addEventListener('input', e=>{ if(e.target?.id==='sec-search-student') renderSecretariaModule(); if(e.target?.id==='sec-filter') renderSecretariaModule(); if(e.target?.id==='sec-dir-filter') renderSecDirectoryList(); if(['sec-dash-from','sec-dash-to','sec-dash-estado','sec-dash-categoria','sec-dash-secretaria','sec-dash-tipo'].includes(e.target?.id)) renderSecretariaModule(); if(['sec-report-from','sec-report-to','sec-report-estado','sec-report-categoria','sec-report-canal','sec-report-secretaria','sec-report-tipo'].includes(e.target?.id)) renderSecretariaReports(); });
-    document.addEventListener('change', e=>{ if(e.target?.id==='sec-student') fillSecStudentManualFields(); if(['sec-report-from','sec-report-to','sec-report-estado','sec-report-categoria','sec-report-canal','sec-report-secretaria','sec-report-tipo'].includes(e.target?.id)) renderSecretariaReports(); });
+    document.addEventListener('change', e=>{ if(e.target?.id==='sec-student') fillSecStudentManualFields(); if(e.target?.id==='sec-user-role') syncSecReportPermissionField(); if(e.target?.id==='sec-perm-reportes') e.target.dataset.touched='1'; if(['sec-report-from','sec-report-to','sec-report-estado','sec-report-categoria','sec-report-canal','sec-report-secretaria','sec-report-tipo'].includes(e.target?.id)) renderSecretariaReports(); });
     document.addEventListener('submit', async e=>{
       if(e.target?.id==='sec-form-user'){ e.preventDefault(); if(!canManageSecretariaProfiles()) return showToast('Solo Admin Secretaría puede administrar perfiles de Secretaría.','error'); const id=$('sec-user-id').value; const payload={nombre:$('sec-user-name').value,email:$('sec-user-email').value,rol:$('sec-user-role').value,activo:$('sec-user-active').checked,permisos:secUserPermsFromForm()}; let res; if(id) res=await sbClient.from('secretaria_usuarios').update(payload).eq('id',id); else res=await sbClient.from('secretaria_usuarios').insert(payload); if(res.error) return showToast(res.error.message,'error'); await syncSecretariaAccessProfile(payload); await secAudit(id?'Editar perfil Secretaría':'Crear perfil Secretaría','secretaria_usuarios',id||null,null,payload); e.target.reset(); $('sec-user-id').value=''; await loadSecretariaData(); renderSecretariaModule(); showToast('Perfil de Secretaría guardado'); }
       if(e.target?.id==='sec-dir-form'){ await saveSecDirectory(e); }
@@ -2519,7 +2562,7 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
           <div><h2 class="text-xl font-bold text-instVerdeOscuro">Atender requerimiento <span id="sec-edit-code" class="text-instPlomo"></span></h2><p class="text-xs text-gray-500">Cambia el estado desde el combo, reasigna secretaria, registra comentario y deja auditoría del cambio.</p></div>
           <button type="button" onclick="closeSecEditModal()" class="text-gray-400 hover:text-red-500 text-2xl"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <form id="sec-edit-form" class="p-6 space-y-4">
+        <form id="sec-edit-form" class="modal-scroll-body p-6 space-y-4">
           <input type="hidden" id="sec-edit-id">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label class="block text-sm font-semibold mb-1">Requerimiento</label><input id="sec-edit-asunto" class="field"></div>
@@ -2528,7 +2571,8 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
             <div><label class="block text-sm font-semibold mb-1">Canal</label><select id="sec-edit-canal" class="field"></select></div>
           </div>
           <div><label class="block text-sm font-semibold mb-1">Detalle / descripción</label><textarea id="sec-edit-descripcion" rows="3" class="field resize-none"></textarea></div>
-          <div><label class="block text-sm font-semibold mb-1">Comentario de seguimiento / motivo</label><textarea id="sec-edit-comentario" rows="3" class="field resize-none" placeholder="Ejemplo: requerimiento resuelto, cancelado por duplicado o transferido a IT por soporte técnico."></textarea></div>
+          <div><div class="flex items-center justify-between gap-2 mb-2"><label class="block text-sm font-semibold">Comentarios anteriores</label><span class="text-[11px] text-gray-500">Se muestran sin importar el estado del ticket</span></div><div id="sec-edit-history" class="space-y-2 max-h-48 overflow-y-auto border rounded-xl p-3 bg-gray-50"><p class="text-sm text-gray-400">Cargando comentarios...</p></div></div>
+          <div><label class="block text-sm font-semibold mb-1">Nuevo comentario de seguimiento / motivo</label><textarea id="sec-edit-comentario" rows="3" class="field resize-none" placeholder="Escribe el nuevo seguimiento para que quede visible a las demás secretarias."></textarea></div>
           <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700"><b>Estados disponibles:</b> Abierto, En Proceso, Pendiente Usuario, Resuelto, Cancelado y Transferido a IT. Ya no se escribe el estado manualmente.</div>
           <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t"><button type="button" onclick="closeSecEditModal()" class="btn btn-muted px-4 py-2">Cancelar</button><button type="submit" class="btn btn-green px-5 py-2"><i class="fa-solid fa-floppy-disk"></i> Guardar cambios</button></div>
         </form>
@@ -2600,7 +2644,7 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
     }
 
     function closeSecEditModal(){ const m=$('modal-sec-edit'); if(m) m.classList.remove('flex'); }
-    function openSecEdit(t){
+    async function openSecEdit(t){
       ensureSecEditModal();
       $('sec-edit-id').value=t.id;
       $('sec-edit-code').textContent=t.codigo||'';
@@ -2611,7 +2655,19 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       $('sec-edit-descripcion').value=t.descripcion||'';
       $('sec-edit-comentario').value='';
       $('sec-edit-secretaria').innerHTML='<option value="">Sin asignar</option>'+secretariaUsersData.filter(s=>s.activo!==false).map(s=>`<option value="${esc(s.id)}" ${String(s.id)===String(t.secretaria_id||'')?'selected':''}>${esc(s.nombre)} · ${esc(s.rol)}</option>`).join('');
+      const history=$('sec-edit-history');
+      if(history) history.innerHTML='<p class="text-sm text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>Cargando comentarios...</p>';
       $('modal-sec-edit').classList.add('flex');
+      try{
+        const {data,error}=await sbClient.from('secretaria_historial').select('id,accion,estado_anterior,estado_nuevo,comentario,created_by,created_at').eq('ticket_id',t.id).order('created_at',{ascending:false}).limit(50);
+        if(error) throw error;
+        const rows=(data||[]).filter(r=>String(r.comentario||'').trim()!=='');
+        if(history) history.innerHTML=rows.length?rows.map(r=>`<div class="history-comment-card"><div class="flex flex-wrap justify-between gap-2 text-[11px] text-gray-500"><b class="text-instVerdeOscuro">${esc(r.created_by||'Secretaría')}</b><span>${esc(formatDateTimeEcuador(r.created_at))}</span></div><p class="text-sm text-gray-700 mt-1 whitespace-pre-wrap">${esc(r.comentario)}</p><p class="text-[11px] text-gray-500 mt-1">${esc(r.accion||'Seguimiento')}${r.estado_nuevo?` · Estado: ${esc(r.estado_nuevo)}`:''}</p></div>`).join(''):'<p class="text-sm text-gray-400">Este ticket todavía no tiene comentarios de seguimiento.</p>';
+      }catch(err){
+        console.warn('No se pudo cargar historial de Secretaría',err);
+        if(history) history.innerHTML='<p class="text-sm text-red-500">No se pudo cargar el historial. Verifica los permisos de secretaria_historial.</p>';
+      }
+      setTimeout(initFloatingScrollbars,30);
     }
     async function saveSecEditFromModal(e){
       e.preventDefault();
@@ -2667,6 +2723,7 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       setAuthMode('new-password');
       showToast('Escribe tu nueva contraseña para completar la recuperación.');
     } });
+    document.addEventListener('DOMContentLoaded',()=>{ syncSecReportPermissionField(); setTimeout(initFloatingScrollbars,100); });
     initApp();
   </script>
 </body>
