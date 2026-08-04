@@ -669,6 +669,19 @@
       </div>
       <form id="form-editar-ticket" class="p-6 space-y-5">
         <input type="hidden" id="edit-ticket-id">
+        <div class="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
+          <div class="flex items-center justify-between gap-3 mb-3"><div><h3 class="font-bold text-instVerdeOscuro"><i class="fa-solid fa-user-graduate mr-2"></i>Datos del usuario atendido</h3><p class="text-xs text-gray-500">Información precargada desde el Directorio para verificar el ticket antes de editarlo.</p></div><span id="edit-user-source" class="text-xs rounded-full bg-white border px-3 py-1 text-emerald-700">Directorio</span></div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="lg:col-span-2"><label class="block text-xs font-semibold mb-1">Nombres</label><input id="edit-user-name" class="field bg-white" readonly></div>
+            <div><label class="block text-xs font-semibold mb-1">Cédula</label><input id="edit-user-idnumber" class="field bg-white" readonly></div>
+            <div><label class="block text-xs font-semibold mb-1">Tipo</label><input id="edit-user-type" class="field bg-white" readonly></div>
+            <div class="lg:col-span-2"><label class="block text-xs font-semibold mb-1">Correo institucional</label><input id="edit-user-email" class="field bg-white" readonly></div>
+            <div class="lg:col-span-2"><label class="block text-xs font-semibold mb-1">Correo personal</label><input id="edit-user-email-personal" class="field bg-white" readonly></div>
+            <div><label class="block text-xs font-semibold mb-1">Celular</label><input id="edit-user-cell" class="field bg-white" readonly></div>
+            <div><label class="block text-xs font-semibold mb-1">WhatsApp</label><input id="edit-user-whatsapp" class="field bg-white" readonly></div>
+            <div class="lg:col-span-2"><label class="block text-xs font-semibold mb-1">Carrera / área / periodo</label><input id="edit-user-career" class="field bg-white" readonly></div>
+          </div>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div><label class="block text-sm font-semibold mb-1">Asunto *</label><input id="edit-asunto" class="field" required></div>
           <div><label class="block text-sm font-semibold mb-1">Estado *</label><select id="edit-estado" class="field"><option>Requiere Seguimiento</option><option>Resuelto</option><option>Cancelado</option></select></div>
@@ -1317,7 +1330,17 @@
     }
     function abrirModalEditarTicket(id){
       const t=ticketsData.find(x=>x.id===id); if(!t)return;
+      const user=userContactForTicket(t);
       $('edit-ticket-id').value=t.id; $('edit-ticket-title').textContent=t.id_str||''; $('edit-asunto').value=t.asunto||''; $('edit-estado').value=t.estado||'Requiere Seguimiento';
+      $('edit-user-name').value=t.usuario_nombre||user.nombres||'';
+      $('edit-user-idnumber').value=t.usuario_cedula||user.cedula||'';
+      $('edit-user-type').value=ticketUserType(t)||user.tipo||'';
+      $('edit-user-email').value=user.correo||'';
+      $('edit-user-email-personal').value=user.correo_personal||'';
+      $('edit-user-cell').value=user.celular||'';
+      $('edit-user-whatsapp').value=user.whatsapp||user.celular||'';
+      $('edit-user-career').value=[user.carrera,user.nivel,user.periodo].filter(Boolean).join(' · ');
+      $('edit-user-source').textContent=Object.keys(user).length?'Directorio actualizado':'Datos guardados en ticket';
       fillConfigSelect('edit-categoria',configData.categorias||[],t.categoria); fillConfigSelect('edit-canal',configData.canales||[],t.canal);
       $('edit-subcategoria').value=t.subcategoria||''; $('edit-prioridad').value=t.prioridad||'Media'; $('edit-descripcion').value=t.descripcion||''; $('edit-comentario').value='';
       $('edit-assigned-agent').innerHTML=agentOptions(agentId(t)); $('edit-tiempo').value=t.estado==='Resuelto'?formatMinutes(ticketResolutionMinutes(t)):'En proceso';
@@ -1433,6 +1456,19 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
 
     function userContactForTicket(t){ return directorioData.find(u=>(t.usuario_id&&String(u.id)===String(t.usuario_id))||(t.usuario_cedula&&String(u.cedula||'')===String(t.usuario_cedula||'')))||{}; }
 
+    function outlookMailPayload(email,subject,body){
+      return encodeURIComponent(JSON.stringify({email:String(email||'').trim(),subject:String(subject||''),body:String(body||'')})).replace(/'/g,'%27');
+    }
+    function openOutlookEmailPayload(encodedPayload){
+      let payload={};
+      try{ payload=JSON.parse(decodeURIComponent(String(encodedPayload||''))); }catch(e){ return showToast('No se pudo preparar el correo de valoración.','error'); }
+      if(!payload.email) return showToast('El usuario no tiene el correo seleccionado.','error');
+      const mailto=`mailto:${encodeURIComponent(payload.email)}?subject=${encodeURIComponent(payload.subject||'')}&body=${encodeURIComponent(payload.body||'')}`;
+      window.location.href=mailto;
+      showToast('Se solicitó abrir el correo en Outlook clásico, Outlook nuevo o el cliente predeterminado de Windows.');
+    }
+    window.openOutlookEmailPayload=openOutlookEmailPayload;
+
     function normalizeWhatsAppNumber(raw){
       let n = String(raw || '').replace(/[^0-9]/g, '');
       if(!n) return '';
@@ -1457,7 +1493,7 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       return `Estimado/a ${userName}, en el Instituto Superior Tecnológico Cordillera es un gusto poder servirle.\n\nSu requerimiento fue atendido por ${attendantName}. Le invitamos a calificar la atención recibida en el siguiente enlace:\n\n${link}\n\nSu opinión nos ayuda a mejorar continuamente nuestros servicios institucionales.`;
     }
 
-    function contactLinksHTML(link, contacto={}, ticket={}){ const emailInst=contacto.correo||''; const emailPersonal=contacto.correo_personal||''; const phone=normalizeWhatsAppNumber(contacto.whatsapp||contacto.celular||''); const subject='Valoración de atención - Instituto Cordillera'; const body=buildInstitutionalRatingMessage(ticket.usuario_nombre||ticket.nombre||contacto.nombres||'Usuario', ticket.assigned_agent_name||ticket.agente_nombre||ticket.secretaria_nombre||'nuestro equipo institucional', link); const teams=emailInst?`https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(emailInst)}&message=${encodeURIComponent(body)}`:''; return `<div class="grid grid-cols-2 gap-2 mt-3 text-sm"><a class="btn btn-muted py-2 ${emailInst?'':'opacity-50 pointer-events-none'}" href="mailto:${encodeURIComponent(emailInst)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}"><i class="fa-solid fa-envelope"></i> Correo inst.</a><a class="btn btn-muted py-2 ${emailPersonal?'':'opacity-50 pointer-events-none'}" href="mailto:${encodeURIComponent(emailPersonal)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}"><i class="fa-solid fa-at"></i> Correo personal</a><a class="btn btn-green py-2 ${phone?'':'opacity-50 pointer-events-none'}" target="_blank" href="https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(body)}"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a><a class="btn bg-blue-600 hover:bg-blue-700 text-white py-2 ${teams?'':'opacity-50 pointer-events-none'}" target="_blank" href="${teams||'#'}"><i class="fa-brands fa-microsoft"></i> Teams</a></div>`; }
+    function contactLinksHTML(link, contacto={}, ticket={}){ const emailInst=contacto.correo||''; const emailPersonal=contacto.correo_personal||''; const phone=normalizeWhatsAppNumber(contacto.whatsapp||contacto.celular||''); const subject='Valoración de atención - Instituto Cordillera'; const body=buildInstitutionalRatingMessage(ticket.usuario_nombre||ticket.nombre||contacto.nombres||'Usuario', ticket.assigned_agent_name||ticket.agente_nombre||ticket.secretaria_nombre||'nuestro equipo institucional', link); const teams=emailInst?`https://teams.microsoft.com/l/chat/0/0?users=${encodeURIComponent(emailInst)}&message=${encodeURIComponent(body)}`:''; const instPayload=outlookMailPayload(emailInst,subject,body); const personalPayload=outlookMailPayload(emailPersonal,subject,body); return `<div class="grid grid-cols-2 gap-2 mt-3 text-sm"><button type="button" class="btn btn-muted py-2 ${emailInst?'':'opacity-50 pointer-events-none'}" onclick="openOutlookEmailPayload('${instPayload}')" title="Abrir en Outlook clásico o Outlook nuevo"><i class="fa-solid fa-envelope"></i> Correo inst.</button><button type="button" class="btn btn-muted py-2 ${emailPersonal?'':'opacity-50 pointer-events-none'}" onclick="openOutlookEmailPayload('${personalPayload}')" title="Abrir en Outlook clásico o Outlook nuevo"><i class="fa-solid fa-at"></i> Correo personal</button><a class="btn btn-green py-2 ${phone?'':'opacity-50 pointer-events-none'}" target="_blank" href="https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(body)}"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a><a class="btn bg-blue-600 hover:bg-blue-700 text-white py-2 ${teams?'':'opacity-50 pointer-events-none'}" target="_blank" href="${teams||'#'}"><i class="fa-brands fa-microsoft"></i> Teams</a></div>`; }
     async function abrirModalLink(id){ const t=ticketsData.find(x=>x.id===id); if(!t)return; let token=t.rating_token; if(!token){ token=randomToken(); const {error}=await sbClient.from('tickets').update({rating_token:token}).eq('id',id); if(error)return showToast(error.message,'error'); t.rating_token=token; } const base=window.location.href.split('#')[0].split('?')[0]; const link=`${base}#rate_ticket=${encodeURIComponent(id)}&token=${encodeURIComponent(token)}`; $('url-valoracion').value=link; const box=$('modal-link-valoracion').querySelector('.bg-white'); let extra=$('rating-contact-actions'); if(!extra){ extra=document.createElement('div'); extra.id='rating-contact-actions'; const ref=$('url-valoracion').closest('.flex'); ref.insertAdjacentElement('afterend',extra); } extra.innerHTML=contactLinksHTML(link,userContactForTicket(t),t); $('btn-test-valoracion').onclick=()=>{window.open(link,'_blank')}; $('modal-link-valoracion').classList.add('flex'); }
     window.abrirModalLink=abrirModalLink; window.cerrarModalLink=()=>$('modal-link-valoracion').classList.remove('flex'); window.copiarUrlValoracion=async()=>{const val=$('url-valoracion').value; try{await navigator.clipboard.writeText(val)}catch(e){$('url-valoracion').select();document.execCommand('copy')} showToast('Enlace copiado')};
 
@@ -2636,7 +2672,7 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
         }
         const note=$('sec-auto-assignment-note'); if(note){note.classList.toggle('hidden',!lock);note.innerHTML=lock?(own?`<i class="fa-solid fa-user-check mr-1"></i> Se asignará automáticamente a <b>${esc(own.nombre)}</b>.`:'<i class="fa-solid fa-triangle-exclamation mr-1"></i> Tu correo no está vinculado a una secretaria activa.') : '';}
       }
-      const body=$('sec-tickets-body'); if(body){ const q=($('sec-filter')?.value||'').toLowerCase(); const rows=visibleTickets.filter(t=>!q||[t.codigo,t.nombre,t.cedula,t.asunto,t.categoria,t.estado,t.secretaria_nombre].some(v=>String(v||'').toLowerCase().includes(q))); body.innerHTML=rows.map(t=>{const url=`${appBaseUrl()}#rate_atencion=${t.id}&token=${t.rating_token||''}`; const phone=normalizeWhatsAppNumber(t.whatsapp||t.celular||''); const msg=buildInstitutionalRatingMessage(t.nombre||'Usuario',t.secretaria_nombre||'Atención Secretaría',url); const wa=phone?'https://api.whatsapp.com/send?phone='+phone+'&text='+encodeURIComponent(msg):'https://api.whatsapp.com/send?text='+encodeURIComponent(msg); const mail='mailto:'+encodeURIComponent(t.correo||'')+'?subject=Valoración de atención - Instituto Cordillera&body='+encodeURIComponent(msg); const mailPersonal='mailto:'+encodeURIComponent(t.correo_personal||'')+'?subject=Valoración de atención - Instituto Cordillera&body='+encodeURIComponent(msg); return `<tr class="border-t hover:bg-gray-50"><td class="px-4 py-3"><b class="text-instVerdeOscuro">${esc(t.codigo)}</b><div class="text-xs text-gray-500">${esc(formatDateTimeEcuador(t.created_at))}</div></td><td class="px-4 py-3">${esc(t.nombre)}<div class="text-xs text-gray-500">${esc(t.usuario_tipo)} · ${esc(t.cedula||'')}</div></td><td class="px-4 py-3">${esc(t.asunto)}<div class="text-xs text-gray-500">${esc(t.categoria||'')}</div></td><td class="px-4 py-3"><b>${esc(t.secretaria_nombre||'Sin asignar')}</b>${t.secretaria_nombre?`<div class="text-xs text-green-600">${esc(t.codigo)} asignado a ${esc(t.secretaria_nombre)}</div>`:''}</td><td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-bold ${t.estado==='Resuelto'?'bg-green-100 text-green-700':t.estado==='Cancelado'?'bg-gray-100 text-gray-600':'bg-orange-100 text-orange-700'}">${esc(t.estado)}</span>${t.transferido_it?'<div class="text-xs text-blue-600 font-bold">Transferido a IT</div>':''}</td><td class="px-4 py-3 text-xs text-gray-600">${esc(secTimeLabel(t))}</td><td class="px-4 py-3 text-xs">${Number(t.valoracion_calificacion||0)>0?`<div class="text-yellow-500 font-bold">${Array.from({length:Number(t.valoracion_calificacion||0)},()=>'★').join('')}</div><div class="text-gray-500 max-w-[180px] truncate" title="${esc(t.valoracion_comentario||'')}">${esc(t.valoracion_comentario||'Sin comentario')}</div>`:'<span class="text-gray-400 italic">Pendiente</span>'}</td><td class="px-4 py-3 text-center whitespace-nowrap"><button onclick='openSecEdit(${JSON.stringify(t).replaceAll("'","&#39;")})' class="text-blue-600 mx-1"><i class="fa-solid fa-pen"></i></button><button onclick='openSecEdit(${JSON.stringify(t).replaceAll("'","&#39;")},true)' class="text-purple-600 mx-1" title="Transferir entre secretarias"><i class="fa-solid fa-right-left"></i></button>${t.rating_token?`<button onclick="navigator.clipboard.writeText('${url}');showToast('URL de valoración copiada')" class="text-yellow-500 mx-1"><i class="fa-solid fa-star"></i></button><a href="${wa}" target="_blank" class="text-green-600 mx-1"><i class="fa-brands fa-whatsapp"></i></a><a href="${mail}" class="text-blue-500 mx-1" title="Correo institucional"><i class="fa-solid fa-envelope"></i></a><a href="${mailPersonal}" class="text-indigo-500 mx-1 ${t.correo_personal?'':'hidden'}" title="Correo personal"><i class="fa-solid fa-at"></i></a><button type="button" onclick='openTeamsRating(${JSON.stringify(t.correo||'').replaceAll("'","&#39;")},${JSON.stringify(msg).replaceAll("'","&#39;")})' class="text-purple-600 mx-1 ${t.correo?'':'hidden'}" title="Teams: abrir chat con el mensaje de valoración"><i class="fa-brands fa-microsoft"></i></button>`:''}<button onclick="deleteSecTicket('${t.id}')" class="text-red-600 mx-1"><i class="fa-solid fa-trash"></i></button></td></tr>`}).join('')||'<tr><td colspan="8" class="p-8 text-center text-gray-400">No hay atenciones asignadas a esta secretaria.</td></tr>'; }
+      const body=$('sec-tickets-body'); if(body){ const q=($('sec-filter')?.value||'').toLowerCase(); const rows=visibleTickets.filter(t=>!q||[t.codigo,t.nombre,t.cedula,t.asunto,t.categoria,t.estado,t.secretaria_nombre].some(v=>String(v||'').toLowerCase().includes(q))); body.innerHTML=rows.map(t=>{const url=`${appBaseUrl()}#rate_atencion=${t.id}&token=${t.rating_token||''}`; const phone=normalizeWhatsAppNumber(t.whatsapp||t.celular||''); const msg=buildInstitutionalRatingMessage(t.nombre||'Usuario',t.secretaria_nombre||'Atención Secretaría',url); const wa=phone?'https://api.whatsapp.com/send?phone='+phone+'&text='+encodeURIComponent(msg):'https://api.whatsapp.com/send?text='+encodeURIComponent(msg); const mailPayload=outlookMailPayload(t.correo||'','Valoración de atención - Instituto Cordillera',msg); const mailPersonalPayload=outlookMailPayload(t.correo_personal||'','Valoración de atención - Instituto Cordillera',msg); return `<tr class="border-t hover:bg-gray-50"><td class="px-4 py-3"><b class="text-instVerdeOscuro">${esc(t.codigo)}</b><div class="text-xs text-gray-500">${esc(formatDateTimeEcuador(t.created_at))}</div></td><td class="px-4 py-3">${esc(t.nombre)}<div class="text-xs text-gray-500">${esc(t.usuario_tipo)} · ${esc(t.cedula||'')}</div></td><td class="px-4 py-3">${esc(t.asunto)}<div class="text-xs text-gray-500">${esc(t.categoria||'')}</div></td><td class="px-4 py-3"><b>${esc(t.secretaria_nombre||'Sin asignar')}</b>${t.secretaria_nombre?`<div class="text-xs text-green-600">${esc(t.codigo)} asignado a ${esc(t.secretaria_nombre)}</div>`:''}</td><td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-bold ${t.estado==='Resuelto'?'bg-green-100 text-green-700':t.estado==='Cancelado'?'bg-gray-100 text-gray-600':'bg-orange-100 text-orange-700'}">${esc(t.estado)}</span>${t.transferido_it?'<div class="text-xs text-blue-600 font-bold">Transferido a IT</div>':''}</td><td class="px-4 py-3 text-xs text-gray-600">${esc(secTimeLabel(t))}</td><td class="px-4 py-3 text-xs">${Number(t.valoracion_calificacion||0)>0?`<div class="text-yellow-500 font-bold">${Array.from({length:Number(t.valoracion_calificacion||0)},()=>'★').join('')}</div><div class="text-gray-500 max-w-[180px] truncate" title="${esc(t.valoracion_comentario||'')}">${esc(t.valoracion_comentario||'Sin comentario')}</div>`:'<span class="text-gray-400 italic">Pendiente</span>'}</td><td class="px-4 py-3 text-center whitespace-nowrap"><button onclick='openSecEdit(${JSON.stringify(t).replaceAll("'","&#39;")})' class="text-blue-600 mx-1"><i class="fa-solid fa-pen"></i></button><button onclick='openSecEdit(${JSON.stringify(t).replaceAll("'","&#39;")},true)' class="text-purple-600 mx-1" title="Transferir entre secretarias"><i class="fa-solid fa-right-left"></i></button>${t.rating_token?`<button onclick="navigator.clipboard.writeText('${url}');showToast('URL de valoración copiada')" class="text-yellow-500 mx-1"><i class="fa-solid fa-star"></i></button><a href="${wa}" target="_blank" class="text-green-600 mx-1"><i class="fa-brands fa-whatsapp"></i></a><button type="button" onclick="openOutlookEmailPayload('${mailPayload}')" class="text-blue-500 mx-1 ${t.correo?'':'hidden'}" title="Correo institucional: abrir en Outlook clásico o nuevo"><i class="fa-solid fa-envelope"></i></button><button type="button" onclick="openOutlookEmailPayload('${mailPersonalPayload}')" class="text-indigo-500 mx-1 ${t.correo_personal?'':'hidden'}" title="Correo personal: abrir en Outlook clásico o nuevo"><i class="fa-solid fa-at"></i></button><button type="button" onclick='openTeamsRating(${JSON.stringify(t.correo||'').replaceAll("'","&#39;")},${JSON.stringify(msg).replaceAll("'","&#39;")})' class="text-purple-600 mx-1 ${t.correo?'':'hidden'}" title="Teams: abrir chat con el mensaje de valoración"><i class="fa-brands fa-microsoft"></i></button>`:''}<button onclick="deleteSecTicket('${t.id}')" class="text-red-600 mx-1"><i class="fa-solid fa-trash"></i></button></td></tr>`}).join('')||'<tr><td colspan="8" class="p-8 text-center text-gray-400">No hay atenciones asignadas a esta secretaria.</td></tr>'; }
       const users=$('sec-users-list'); if(users){ users.innerHTML=secretariaUsersData.map(u=>`<div class="border rounded-xl p-3"><div class="flex justify-between gap-2"><div><b class="text-instVerdeOscuro">${esc(u.nombre)}</b><p class="text-xs text-gray-500">${esc(u.email||'')} · ${esc(u.rol)}</p></div><span class="text-xs px-2 py-1 rounded-full ${u.activo?'bg-green-100 text-green-700':'bg-gray-100 text-gray-500'}">${u.activo?'Activo':'Inactivo'}</span></div><div class="mt-2 flex gap-2"><button onclick='editSecUser(${JSON.stringify(u).replaceAll("'","&#39;")})' class="text-blue-600 text-sm font-bold">Editar</button><button onclick="toggleSecUser('${u.id}',${u.activo?false:true})" class="text-orange-600 text-sm font-bold">${u.activo?'Inactivar':'Activar'}</button><button onclick="copySecAccessLink('${u.id}')" class="text-green-600 text-sm font-bold">Acceso</button><button onclick="deleteSecUser('${u.id}')" class="text-red-600 text-sm font-bold">Eliminar</button></div></div>`).join('')||'<p class="text-gray-400">No hay secretarias registradas.</p>'; }
       if(view==='transferencias') renderSecretariaTransfers();
       if(view==='directorio') renderSecDirectoryList();
@@ -2754,6 +2790,19 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
         </div>
         <form id="sec-edit-form" class="sec-edit-modal-body p-6 space-y-4">
           <input type="hidden" id="sec-edit-id">
+          <div class="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
+            <div class="flex items-center justify-between gap-3 mb-3"><div><h3 class="font-bold text-instVerdeOscuro"><i class="fa-solid fa-user-check mr-2"></i>Datos del usuario atendido</h3><p class="text-xs text-gray-500">Se precargan desde el ticket y se completan con el Directorio cuando existe coincidencia.</p></div><span id="sec-edit-user-source" class="text-xs rounded-full bg-white border px-3 py-1 text-emerald-700">Ticket</span></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div><label class="block text-xs font-semibold mb-1">Tipo de usuario</label><select id="sec-edit-user-type" class="field"><option>Estudiante</option><option>Docente</option><option>Administrativo</option><option>Externo</option></select></div>
+              <div class="lg:col-span-2"><label class="block text-xs font-semibold mb-1">Nombres completos</label><input id="sec-edit-user-name" class="field"></div>
+              <div><label class="block text-xs font-semibold mb-1">Cédula / identificación</label><input id="sec-edit-user-idnumber" class="field"></div>
+              <div class="lg:col-span-2"><label class="block text-xs font-semibold mb-1">Correo institucional</label><input id="sec-edit-user-email" type="email" class="field"></div>
+              <div class="lg:col-span-2"><label class="block text-xs font-semibold mb-1">Correo personal</label><input id="sec-edit-user-email-personal" type="email" class="field"></div>
+              <div><label class="block text-xs font-semibold mb-1">Celular</label><input id="sec-edit-user-cell" class="field"></div>
+              <div><label class="block text-xs font-semibold mb-1">WhatsApp</label><input id="sec-edit-user-whatsapp" class="field"></div>
+              <div class="lg:col-span-2"><label class="block text-xs font-semibold mb-1">Carrera / área / periodo</label><input id="sec-edit-user-career" class="field bg-white" readonly></div>
+            </div>
+          </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label class="block text-sm font-semibold mb-1">Requerimiento</label><input id="sec-edit-asunto" class="field"></div>
             <div><label class="block text-sm font-semibold mb-1">Estado</label><select id="sec-edit-estado" class="field"><option>Abierto</option><option>En Proceso</option><option>Pendiente Usuario</option><option>Resuelto</option><option>Cancelado</option><option>Transferido a IT</option></select></div>
@@ -2863,6 +2912,16 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       $('sec-edit-estado').value=t.transferido_it?'Transferido a IT':(t.estado||'Abierto');
       $('sec-edit-canal').innerHTML=secretariaCanalesList().map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
       $('sec-edit-canal').value=t.canal||'Presencial';
+      const user=directorioData.find(u=>(t.estudiante_id&&String(u.id)===String(t.estudiante_id))||(t.cedula&&String(u.cedula||'')===String(t.cedula||'')))||{};
+      $('sec-edit-user-type').value=secretariaAllowedUserType(t.usuario_tipo||user.tipo||'Estudiante');
+      $('sec-edit-user-name').value=t.nombre||user.nombres||'';
+      $('sec-edit-user-idnumber').value=t.cedula||user.cedula||'';
+      $('sec-edit-user-email').value=t.correo||user.correo||'';
+      $('sec-edit-user-email-personal').value=t.correo_personal||user.correo_personal||'';
+      $('sec-edit-user-cell').value=t.celular||user.celular||'';
+      $('sec-edit-user-whatsapp').value=t.whatsapp||user.whatsapp||user.celular||'';
+      $('sec-edit-user-career').value=[user.carrera,user.nivel,user.periodo].filter(Boolean).join(' · ');
+      $('sec-edit-user-source').textContent=Object.keys(user).length?'Directorio + ticket':'Datos guardados en ticket';
       $('sec-edit-descripcion').value=t.descripcion||'';
       $('sec-edit-comentario').value='';
       const activas=secretariaUsersData.filter(s=>s.activo!==false);
@@ -2889,6 +2948,13 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       const internalTransfer=!!finalSec && String(finalSec.id)!==String(old.secretaria_id||'');
       if(internalTransfer && !comentario) return showToast('Ingrese el motivo o contexto de la transferencia entre secretarias.','error');
       const payload={
+        usuario_tipo:secretariaAllowedUserType($('sec-edit-user-type').value),
+        cedula:$('sec-edit-user-idnumber').value.trim(),
+        nombre:$('sec-edit-user-name').value.trim(),
+        correo:$('sec-edit-user-email').value.trim(),
+        correo_personal:$('sec-edit-user-email-personal').value.trim(),
+        celular:$('sec-edit-user-cell').value.trim(),
+        whatsapp:$('sec-edit-user-whatsapp').value.trim(),
         asunto:$('sec-edit-asunto').value,
         estado: transferIT ? 'Transferido a IT' : nuevo,
         transferido_it: transferIT,
@@ -2916,6 +2982,9 @@ Respuesta Soporte IT: ${comentario||'Requerimiento solucionado por Soporte IT.'}
       if(internalTransfer){
         const {error:rpcError}=await sbClient.rpc('transferir_ticket_secretaria',{p_ticket_id:id,p_secretaria_destino_id:finalSec.id,p_comentario:comentario});
         if(rpcError) return showToast('No se realizó la transferencia: '+rpcError.message+'. Ejecuta SQL_FIX_TRANSFERENCIAS_SECRETARIA_PRODUCCION.sql.','error');
+        const transferUpdate={...payload,secretaria_id:finalSec.id,secretaria_nombre:finalSec.nombre,transferido_it:false};
+        const {error:transferUpdateError}=await sbClient.from('secretaria_tickets').update(transferUpdate).eq('id',id);
+        if(transferUpdateError) showToast('El ticket fue transferido, pero no se pudieron guardar todos los datos editados: '+transferUpdateError.message,'error');
         const destinationAgent=agentsData.find(a=>String(a.auth_user_id||'')===String(finalSec.auth_user_id||'')) || agentsData.find(a=>normalizeEmail(a.email||'')===normalizeEmail(finalSec.email||''));
         if(destinationAgent?.id){
           try{ await sbClient.from('notificaciones').insert({agent_id:destinationAgent.id,ticket_id:null,tipo:'secretaria_transferencia',titulo:`Transferencia recibida: ${old.codigo||''}`,mensaje:`${old.secretaria_nombre||'Secretaría'} transfirió el ticket ${old.codigo||''}. Motivo: ${comentario}`,data:{secretaria_ticket_id:id,codigo:old.codigo,origen:old.secretaria_nombre,destino:finalSec.nombre},created_by:currentProfile?.id||null,created_by_nombre:currentProfile?.nombre_completo||currentUser?.email||''}); }catch(e){ console.warn('No se pudo notificar la transferencia',e); }
