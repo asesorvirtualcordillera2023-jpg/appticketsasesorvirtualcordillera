@@ -333,6 +333,7 @@
         <button onclick="switchTab('tab-notificaciones')" id="btn-tab-notificaciones" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-bell w-5 text-center"></i> Notificaciones <span id="notif-count-nav" class="notification-dot hidden ml-auto">0</span></button>
         <button onclick="switchTab('tab-auditoria')" id="btn-tab-auditoria" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-shield-halved w-5 text-center"></i> Auditoría</button>
         <button onclick="switchTab('tab-config')" id="btn-tab-config" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-gear w-5 text-center"></i> Configuración</button>
+        <button onclick="switchTab('tab-sql-migracion')" id="btn-tab-sql-migracion" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-white text-left"><i class="fa-solid fa-database w-5 text-center"></i> Migración SQL PHP</button>
       </nav>
       <div class="p-4 border-t border-white/10"><button onclick="logout()" class="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-instTomate hover:bg-instTomate hover:text-white rounded-lg transition-colors border border-instTomate"><i class="fa-solid fa-sign-out-alt"></i> Cerrar sesión</button></div>
     </aside>
@@ -683,6 +684,67 @@
           <div class="bg-white rounded-2xl border shadow-sm overflow-hidden"><div class="p-4 border-b bg-gray-50 flex justify-between items-center"><h3 class="font-semibold text-instVerdeOscuro">Registros de auditoría</h3><span id="aud-count" class="text-xs bg-instVerdeClaro text-white px-3 py-1 rounded-full">0</span></div><div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="bg-gray-50"><tr><th class="px-4 py-3">Fecha</th><th class="px-4 py-3">Módulo</th><th class="px-4 py-3">Acción</th><th class="px-4 py-3">Usuario</th><th class="px-4 py-3">Registro</th><th class="px-4 py-3">Detalle</th></tr></thead><tbody id="auditoria-table-body"></tbody></table></div></div>
         </section>
 
+<section id="tab-sql-migracion" class="tab-content max-w-7xl mx-auto">
+  <div class="flex flex-col lg:flex-row lg:items-center gap-4 mb-6">
+    <div class="flex items-center gap-3">
+      <div class="module-logo-wrap"><img class="module-logo" src="logo-icono-cordillera.jpg" alt="Logo Cordillera"></div>
+      <div>
+        <div class="flex items-center gap-2 flex-wrap"><h2 class="text-2xl font-bold text-instVerdeOscuro">Migración / Exportación SQL para PHP</h2><span class="px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200"><i class="fa-solid fa-lock mr-1"></i>Solo administrador</span></div>
+        <p class="text-sm text-instPlomo">Genera archivos SQL compatibles con la base <b>sistema_incidentes</b> del paquete PHP/MySQL V15.1 o superior.</p>
+      </div>
+    </div>
+    <button onclick="renderMySQLExportAdminPanel(true)" class="btn btn-muted px-4 py-2 lg:ml-auto"><i class="fa-solid fa-rotate"></i> Actualizar resumen</button>
+  </div>
+
+  <div class="bg-gradient-to-r from-emerald-50 via-cyan-50 to-orange-50 border border-emerald-200 rounded-2xl p-5 mb-6 shadow-sm">
+    <div class="flex items-start gap-3"><div class="w-11 h-11 rounded-xl bg-instVerdeClaro text-white flex items-center justify-center text-xl shadow"><i class="fa-solid fa-database"></i></div><div><h3 class="font-bold text-instVerdeOscuro">Migración controlada Supabase → PHP/MySQL</h3><p class="text-sm text-slate-600 mt-1">Primero instala el <code>database/schema_mysql.sql</code> del PHP. Después importa el SQL generado aquí. Los UUID de Supabase se reconstruyen mediante correo, cédula y códigos de ticket para mantener las relaciones en MySQL.</p></div></div>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
+    <div class="bg-white border rounded-2xl p-4 shadow-sm"><p class="text-[11px] uppercase font-bold text-gray-500">Agentes</p><b id="sql-mig-count-agentes" class="text-2xl text-instVerdeOscuro">-</b></div>
+    <div class="bg-white border rounded-2xl p-4 shadow-sm"><p class="text-[11px] uppercase font-bold text-gray-500">Directorio</p><b id="sql-mig-count-directorio" class="text-2xl text-instVerdeOscuro">-</b></div>
+    <div class="bg-white border rounded-2xl p-4 shadow-sm"><p class="text-[11px] uppercase font-bold text-gray-500">Tickets IT</p><b id="sql-mig-count-tickets" class="text-2xl text-blue-600">-</b></div>
+    <div class="bg-white border rounded-2xl p-4 shadow-sm"><p class="text-[11px] uppercase font-bold text-gray-500">Tickets Secretaría</p><b id="sql-mig-count-sec" class="text-2xl text-emerald-600">-</b></div>
+    <div class="bg-white border rounded-2xl p-4 shadow-sm"><p class="text-[11px] uppercase font-bold text-gray-500">Notificaciones</p><b id="sql-mig-count-notif" class="text-2xl text-instTomate">-</b></div>
+    <div class="bg-white border rounded-2xl p-4 shadow-sm"><p class="text-[11px] uppercase font-bold text-gray-500">Transferencias</p><b id="sql-mig-count-trans" class="text-2xl text-purple-600">-</b></div>
+  </div>
+
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
+    <div class="xl:col-span-2 bg-white border rounded-2xl shadow-sm overflow-hidden">
+      <div class="p-5 border-b bg-slate-50"><h3 class="font-bold text-instVerdeOscuro"><i class="fa-solid fa-boxes-stacked mr-2"></i>Exportaciones por módulo</h3><p class="text-xs text-gray-500 mt-1">Úsalas cuando quieras actualizar solo una parte de la base PHP.</p></div>
+      <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-3">
+        <button onclick="exportAgentsSQLMySQL()" class="btn btn-muted justify-start px-4 py-3"><i class="fa-solid fa-users-gear text-instVerdeClaro w-5"></i><span><b>Agentes</b><small class="block text-gray-500 font-normal">Perfiles, roles y permisos</small></span></button>
+        <button onclick="exportDirectorioSQLMySQL()" class="btn btn-muted justify-start px-4 py-3"><i class="fa-solid fa-address-book text-instVerdeClaro w-5"></i><span><b>Directorio</b><small class="block text-gray-500 font-normal">Estudiantes, docentes y administrativos</small></span></button>
+        <button onclick="exportTicketsSQLMySQL()" class="btn btn-muted justify-start px-4 py-3"><i class="fa-solid fa-ticket text-blue-600 w-5"></i><span><b>Tickets IT</b><small class="block text-gray-500 font-normal">Tickets y seguimientos</small></span></button>
+        <button onclick="exportNotificationsSQLMySQL()" class="btn btn-muted justify-start px-4 py-3"><i class="fa-solid fa-bell text-instTomate w-5"></i><span><b>Notificaciones</b><small class="block text-gray-500 font-normal">Histórico de avisos</small></span></button>
+        <button onclick="exportSecretariaSQLMySQL()" class="btn btn-muted justify-start px-4 py-3"><i class="fa-solid fa-user-tie text-emerald-600 w-5"></i><span><b>Atención Secretaría</b><small class="block text-gray-500 font-normal">Personal, tickets, historial y auditoría</small></span></button>
+        <button onclick="exportSecretariaTransfersSQLMySQL()" class="btn btn-muted justify-start px-4 py-3"><i class="fa-solid fa-right-left text-purple-600 w-5"></i><span><b>Transferencias Secretaría</b><small class="block text-gray-500 font-normal">Trazabilidad entre secretarias</small></span></button>
+        <button onclick="exportAuditoriaSQLMySQL()" class="btn btn-muted justify-start px-4 py-3"><i class="fa-solid fa-shield-halved text-slate-600 w-5"></i><span><b>Auditoría Secretaría</b><small class="block text-gray-500 font-normal">Acciones y cambios registrados</small></span></button>
+        <button onclick="exportConfigSQLMySQL()" class="btn btn-muted justify-start px-4 py-3"><i class="fa-solid fa-gears text-instVerdeOscuro w-5"></i><span><b>Configuración y periodos</b><small class="block text-gray-500 font-normal">Categorías, canales y periodos</small></span></button>
+      </div>
+    </div>
+
+    <div class="bg-white border-2 border-instVerdeClaro rounded-2xl shadow-md p-5 flex flex-col">
+      <div class="w-14 h-14 rounded-2xl bg-instVerdeClaro text-white flex items-center justify-center text-2xl shadow-md mb-4"><i class="fa-solid fa-file-code"></i></div>
+      <h3 class="text-xl font-bold text-instVerdeOscuro">SQL completo</h3>
+      <p class="text-sm text-gray-600 mt-2 flex-1">Genera un único archivo con Agentes, Directorio, Periodos, Configuración, Tickets IT, Seguimientos, Notificaciones, Secretaría, Transferencias, Auditoría, invitaciones e historial de informes.</p>
+      <button onclick="exportAllSQLMySQL()" class="btn btn-green w-full justify-center mt-5 py-3"><i class="fa-solid fa-download"></i> Generar SQL completo → PHP</button>
+      <p class="text-[11px] text-gray-400 mt-3 text-center">Para migración integral o respaldo compatible con PHP/MySQL.</p>
+    </div>
+  </div>
+
+  <div class="bg-white border rounded-2xl shadow-sm p-5">
+    <h3 class="font-bold text-instVerdeOscuro mb-3"><i class="fa-solid fa-circle-info mr-2"></i>Orden recomendado</h3>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
+      <div class="rounded-xl bg-slate-50 border p-3"><b>1. PHP</b><p class="text-gray-500 mt-1">Crear la estructura ejecutando <code>database/schema_mysql.sql</code>.</p></div>
+      <div class="rounded-xl bg-slate-50 border p-3"><b>2. Exportar</b><p class="text-gray-500 mt-1">Generar SQL completo o los módulos necesarios desde esta pantalla.</p></div>
+      <div class="rounded-xl bg-slate-50 border p-3"><b>3. Importar</b><p class="text-gray-500 mt-1">Importar el archivo en phpMyAdmin sobre <code>sistema_incidentes</code>.</p></div>
+      <div class="rounded-xl bg-slate-50 border p-3"><b>4. Verificar</b><p class="text-gray-500 mt-1">Comprobar agentes, tickets, Secretaría, KPI y relaciones.</p></div>
+    </div>
+    <div id="sql-mig-status" class="mt-4 text-xs text-gray-500">Abre este módulo para consultar los totales disponibles en Supabase.</div>
+  </div>
+</section>
+
 <section id="tab-config" class="tab-content max-w-6xl mx-auto"><div class="flex items-center gap-3 mb-6"><div class="module-logo-wrap"><img class="module-logo" src="data:image/jpeg;base64,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" alt="Logo Cordillera"></div><h2 class="text-2xl font-bold text-instVerdeOscuro">Configuración</h2><button onclick="exportConfigXLS()" class="btn btn-green px-4 py-2 ml-auto"><i class="fa-solid fa-file-excel"></i> XLS</button></div><div class="grid grid-cols-1 md:grid-cols-3 gap-6"><div class="bg-white p-6 rounded-2xl shadow-sm border"><h3 class="font-semibold text-instVerdeOscuro mb-2 border-b pb-2"><i class="fa-solid fa-upload"></i> Importar Directorio Excel/CSV</h3><div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 mb-3">
   <b class="text-instVerdeOscuro">Formato Excel/CSV aceptado:</b><br>
   <code class="block mt-2 whitespace-normal leading-5">CEDULA,NOMBRE,CORREO_INSTITUCIONAL,CORREO_PERSONAL,CELULAR,WHATSAPP,CARRERA,NIVEL,TIPO,PERIODO</code>
@@ -975,6 +1037,7 @@
     function normalizePermissions(role, perms){ const r=normalizeRole(role); const custom=(perms && typeof perms==='object')?perms:{}; const out={...permissionsFromRole(r),...custom}; if(['secretaria','supervisora_secretaria','admin_secretaria'].includes(r)) out.reportes=false; if(r==='secretaria') out.reportes_secretaria=false; if(['supervisora_secretaria','admin_secretaria'].includes(r) && !Object.prototype.hasOwnProperty.call(custom,'reportes_secretaria')) out.reportes_secretaria=true; return out; }
     function userPermissions(){ return normalizePermissions(currentProfile?.rol, currentProfile?.permisos); }
     function hasModuleAccess(tabId){
+      if(tabId==='tab-sql-migracion') return isAdmin();
       if(isAdmin()) return true;
       if(['tab-secretaria','tab-sec-nueva','tab-sec-registros','tab-sec-transferencias','tab-sec-directorio'].includes(tabId)) return !!userPermissions().secretaria;
       if(tabId==='tab-sec-dashboard') return !!userPermissions().secretaria && canViewSecretariaDashboard();
@@ -1276,6 +1339,7 @@
       if(effectiveTabId==='tab-sec-reportes'){loadSecretariaReportData().then(renderSecretariaReports)}
       if(effectiveTabId==='tab-secretaria'){loadSecretariaData().then(renderSecretariaModule)}
       if(effectiveTabId==='tab-auditoria'){loadAuditoriaGeneral().then(renderAuditoriaGeneral)}
+      if(effectiveTabId==='tab-sql-migracion' && typeof window.renderMySQLExportAdminPanel==='function'){window.renderMySQLExportAdminPanel()}
       applyRoleAccess();
     }
     window.switchTab=switchTab; window.toggleMobileMenu=()=>{const s=document.querySelector('aside');s.classList.toggle('hidden');s.classList.toggle('absolute');s.classList.toggle('h-full');s.classList.toggle('z-50')};
